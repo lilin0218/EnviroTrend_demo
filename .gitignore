@@ -31,8 +31,14 @@ src/pySrc/dbData/
 # *.pt
 # models/
 
-# Deployment files (commented out to allow submission)
-# deploy/
+# Deployment files
+deploy/
+
+# Run cmake script
+run_cmake.sh
+
+# QMake stash file
+.qmake.stash
 
 # Log files
 *.log
@@ -61,9 +67,3 @@ CMakeLists.txt.user
 
 # Database data files
 dbData/
-
-# Deploy executable
-deploy/EnviroTrend_demo
-
-# Deploy database data
-deploy/dbData/
