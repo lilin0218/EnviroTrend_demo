@@ -1,0 +1,69 @@
+# Qt build files
+build/
+*.o
+*.moc
+moc_*.cpp
+qrc_*.cpp
+Makefile
+CMakeCache.txt
+CMakeFiles/
+*.pro.user
+*.qbs.user
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.qtcreator/
+qtc-clangd/
+
+# Python files
+__pycache__/
+*.pyc
+
+# CSV data files (if they contain large data)
+src/pySrc/dbData/
+
+# Model files (commented out to allow submission)
+# *.pth
+# *.pt
+# models/
+
+# Deployment files (commented out to allow submission)
+# deploy/
+
+# Log files
+*.log
+
+# Environment files
+.env
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Home directory files
+~/
+
+# Trae IDE files
+.trae/
+
+# Backup directories
+deploy_backup/
+
+# Qt Creator user config
+CMakeLists.txt.user
+
+# Log files
+来自开发板的日志
+
+# Database data files
+dbData/
+
+# Deploy executable
+deploy/EnviroTrend_demo
+
+# Deploy database data
+deploy/dbData/
