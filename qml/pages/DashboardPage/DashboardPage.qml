@@ -51,22 +51,22 @@ Item {
             iconSource_unchecked: "qrc:/res/sensor/light_unchecked.png"
         }
 
-        // 4. 有害气体 - 绑定 Core 中的 aqiStr
+        // 4. MQ135 (气体颗粒物) - 绑定 Core 中的 mq135Str
         SensorCard {
             width: cardWidth; height: cardHeight
-            label: "有害气体"; unit: "AQI";
-            value: core.aqiStr
+            label: "MQ135 (气体颗粒物)"; unit: "ppm";
+            value: core.mq135Str
             sensorId: 3
             sensorName: "MQ135"
             iconSource_checked: "qrc:/res/sensor/aqi_checked.png"
             iconSource_unchecked: "qrc:/res/sensor/aqi_unchecked.png"
         }
 
-        // 5. 空气质量 - 绑定 Core 中的 pm25Str
+        // 5. ZP01 (空气质量) - 绑定 Core 中的 zp01Str
         SensorCard {
             width: cardWidth; height: cardHeight
-            label: "空气质量"; unit: "μg/m³";
-            value: core.pm25Str
+            label: "ZP01 (空气质量)"; unit: "μg/m³";
+            value: core.zp01Str
             sensorId: 2
             sensorName: "ZP01"
             iconSource_checked: "qrc:/res/sensor/particle_checked.png"

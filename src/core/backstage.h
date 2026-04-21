@@ -29,30 +29,24 @@ public:
     void setHum(double hum);
     double getLight() const;
     void setLight(double light);
-    double getPM25() const;
-    void setPM25(double pm25);
-    double getPM10() const;
-    void setPM10(double pm10);
-    double getAQI() const;
-    void setAQI(double aqi);
-    double getGas() const;
-    void setGas(double gas);
+    double getZP01() const;
+    void setZP01(double zp01);
+    double getMQ135() const;
+    void setMQ135(double mq135);
 
     // 为 Core 提供数据访问
     QList<double> getTempBuffer() const;
     QList<double> getHumBuffer() const;
     QList<double> getLightBuffer() const;
-    QList<double> getPM25Buffer() const;
-    QList<double> getPM10Buffer() const;
-    QList<double> getAQIBuffer() const;
+    QList<double> getZP01Buffer() const;
+    QList<double> getMQ135Buffer() const;
 
     // 清空传感器buffer
     void clearTempBuffer();
     void clearHumBuffer();
     void clearLightBuffer();
-    void clearPM25Buffer();
-    void clearPM10Buffer();
-    void clearAQIBuffer();
+    void clearZP01Buffer();
+    void clearMQ135Buffer();
     void clearAllBuffers();
 
     // 返回当前每个历史数据点时间间隔
@@ -85,10 +79,9 @@ private:
 
     bool initStorage();
     bool initDatabase();
-    bool updateDatabase(double t, double h, double light, double pm25, double pm10, double aqi);
+    bool updateDatabase(double t, double h, double light, double mq135, double zp01);
     bool loadBufferFromDatabase();
     void uploadToServer();
-    double calculateAQI(double pm25);
 
     QSqlDatabase m_db;
     QString m_dbPath;
@@ -96,17 +89,14 @@ private:
     QList<double> m_tempBuffer;
     QList<double> m_humBuffer;
     QList<double> m_lightBuffer;
-    QList<double> m_pm25Buffer;
-    QList<double> m_pm10Buffer;
-    QList<double> m_aqiBuffer;
+    QList<double> m_zp01Buffer;
+    QList<double> m_mq135Buffer;
 
     double m_currentTemp;
     double m_currentHum;
     double m_currentLight;
-    double m_currentPM25;
-    double m_currentPM10;
-    double m_currentAQI;
-    double m_currentGas;
+    double m_currentZP01;
+    double m_currentMQ135;
 
     QTimer *m_sampleTimer;
     const int MAX_POINTS_24H;

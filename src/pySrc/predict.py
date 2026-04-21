@@ -10,18 +10,17 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-# 屏蔽所有警告，确保控制台输出只有纯净的 JSON（日志在 stdout 前半部分，由 Qt 侧截断）
 warnings.filterwarnings("ignore")
 
 
-# 与训练脚本保持一致的模型结构
 class EnviroLSTM(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int, num_layers: int, output_points: int):
+    def __init__(self, input_size: int, hidden_size: int, num_layers: int, output_points: int, output_features: int = 5):
         super(EnviroLSTM, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.output_features = output_features
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_points * 2)
+        self.fc = nn.Linear(hidden_size, output_points * output_features)
 
     def forward(self, x, device):
         batch_size = x.size(0)
@@ -32,10 +31,6 @@ class EnviroLSTM(nn.Module):
 
 
 def get_device():
-    """
-    推理阶段默认使用 CPU，但如果有可用 GPU 也可以启用。
-    为避免嵌入式开发板上额外依赖，这里只做简单探测。
-    """
     if torch.cuda.is_available():
         name = torch.cuda.get_device_name(0)
         return torch.device("cuda")
@@ -48,6 +43,7 @@ def predict():
 
     WINDOW_SIZE = 360
     PREDICT_STEPS = 1440
+    OUTPUT_FEATURES = 5
 
     device = get_device()
 
@@ -75,9 +71,9 @@ def predict():
 
     conn = sqlite3.connect(db_path)
     query = """
-        SELECT timestamp, temp, hum 
-        FROM sensor_data 
-        WHERE temp IS NOT NULL AND hum IS NOT NULL
+        SELECT timestamp, temperature, humidity, light, mq135, zp01 
+        FROM environmental_data 
+        WHERE temperature IS NOT NULL AND humidity IS NOT NULL AND light IS NOT NULL AND mq135 IS NOT NULL AND zp01 IS NOT NULL
         ORDER BY timestamp DESC 
         LIMIT 2000
     """
@@ -91,8 +87,12 @@ def predict():
     df = df.sort_values("timestamp").reset_index(drop=True)
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df["time_delta"] = df["timestamp"].diff().dt.total_seconds().fillna(0.0)
+    df["hour"] = df["timestamp"].dt.hour
+    df["day_of_week"] = df["timestamp"].dt.dayofweek
+    df["month"] = df["timestamp"].dt.month
+    df["day_of_month"] = df["timestamp"].dt.day
 
-    features = df[["temp", "hum", "time_delta"]].values.astype(np.float64)
+    features = df[["temperature", "humidity", "light", "mq135", "zp01", "time_delta", "hour", "day_of_week", "month", "day_of_month"]].values.astype(np.float64)
 
     if len(features) >= WINDOW_SIZE:
         recent = features[-WINDOW_SIZE:]
@@ -104,7 +104,7 @@ def predict():
     scaled = (recent - f_min) / (f_max - f_min + 1e-6)
     input_tensor = torch.from_numpy(scaled.astype(np.float32)).unsqueeze(0).to(device)
 
-    model = EnviroLSTM(input_size=3, hidden_size=128, num_layers=2, output_points=PREDICT_STEPS).to(device)
+    model = EnviroLSTM(input_size=10, hidden_size=128, num_layers=2, output_points=PREDICT_STEPS, output_features=OUTPUT_FEATURES).to(device)
     state_dict = torch.load(model_path, map_location=device)
     model.load_state_dict(state_dict)
     model.eval()
@@ -113,7 +113,10 @@ def predict():
         pred = model(input_tensor, device).cpu().numpy().flatten()
 
     p_temp = pred[:PREDICT_STEPS] * (f_max[0] - f_min[0]) + f_min[0]
-    p_hum = pred[PREDICT_STEPS:] * (f_max[1] - f_min[1]) + f_min[1]
+    p_hum = pred[PREDICT_STEPS:2*PREDICT_STEPS] * (f_max[1] - f_min[1]) + f_min[1]
+    p_light = pred[2*PREDICT_STEPS:3*PREDICT_STEPS] * (f_max[2] - f_min[2]) + f_min[2]
+    p_mq135 = pred[3*PREDICT_STEPS:4*PREDICT_STEPS] * (f_max[3] - f_min[3]) + f_min[3]
+    p_zp01 = pred[4*PREDICT_STEPS:5*PREDICT_STEPS] * (f_max[4] - f_min[4]) + f_min[4]
 
     num_pts = min(requested_pts, PREDICT_STEPS)
     results = []
@@ -125,8 +128,11 @@ def predict():
                 "timestamp": (last_time + timedelta(seconds=(i + 1) * interval)).strftime(
                     "%Y-%m-%d %H:%M:%S"
                 ),
-                "temp": round(float(p_temp[i]), 2),
-                "hum": round(float(p_hum[i]), 2),
+                "temperature": round(float(p_temp[i]), 2),
+                "humidity": round(float(p_hum[i]), 2),
+                "light": round(float(p_light[i]), 2),
+                "mq135": round(float(p_mq135[i]), 2),
+                "zp01": round(float(p_zp01[i]), 2),
             }
         )
 

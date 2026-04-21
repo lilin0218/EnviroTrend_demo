@@ -9,10 +9,8 @@ Backstage::Backstage(QObject *parent)
       m_currentTemp(0.0),
       m_currentHum(0.0),
       m_currentLight(0.0),
-      m_currentPM25(0.0),
-      m_currentPM10(0.0),
-      m_currentAQI(0.0),
-      m_currentGas(0.0),
+      m_currentZP01(0.0),
+      m_currentMQ135(0.0),
       MAX_POINTS_24H(1440),
       m_msPerPoint(60000),
       m_mockMode(false),
@@ -44,7 +42,7 @@ Backstage::~Backstage() {
         m_sampleTimer->stop();
         // 确保最后一次数据写入
         if (!m_mockMode) {
-            updateDatabase(m_currentTemp, m_currentHum, m_currentLight, m_currentPM25, m_currentPM10, m_currentAQI);
+            updateDatabase(m_currentTemp, m_currentHum, m_currentLight, m_currentMQ135, m_currentZP01);
         }
     }
     if (m_db.isOpen()) {
@@ -92,13 +90,11 @@ bool Backstage::initDatabase() {
         "CREATE TABLE IF NOT EXISTS sensor_data ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "timestamp DATETIME NOT NULL, "
-        "temp REAL, "
-        "hum REAL, "
+        "temperature REAL, "
+        "humidity REAL, "
         "light REAL, "
-        "pm25 REAL, "
-        "pm10 REAL, "
-        "aqi REAL, "
-        "noise REAL"
+        "mq135 REAL, "
+        "zp01 REAL"
         ")";
 
     if (!query.exec(createTableSQL)) {
@@ -123,7 +119,7 @@ bool Backstage::loadBufferFromDatabase() {
 
     QSqlQuery query(m_db);
     QString sql = QString(
-        "SELECT temp, hum, light, pm25, pm10, aqi FROM sensor_data "
+        "SELECT temperature, humidity, light, mq135, zp01 FROM sensor_data "
         "ORDER BY timestamp DESC LIMIT %1"
     ).arg(MAX_POINTS_24H);
 
@@ -135,32 +131,29 @@ bool Backstage::loadBufferFromDatabase() {
     m_tempBuffer.clear();
     m_humBuffer.clear();
     m_lightBuffer.clear();
-    m_pm25Buffer.clear();
-    m_pm10Buffer.clear();
-    m_aqiBuffer.clear();
+    m_zp01Buffer.clear();
+    m_mq135Buffer.clear();
 
-    QList<double> tempList, humList, lightList, pm25List, pm10List, aqiList;
+    QList<double> tempList, humList, lightList, mq135List, zp01List;
     while (query.next()) {
         tempList.prepend(query.value(0).toDouble());
         humList.prepend(query.value(1).toDouble());
         lightList.prepend(query.value(2).toDouble());
-        pm25List.prepend(query.value(3).toDouble());
-        pm10List.prepend(query.value(4).toDouble());
-        aqiList.prepend(query.value(5).toDouble());
+        mq135List.prepend(query.value(3).toDouble());
+        zp01List.prepend(query.value(4).toDouble());
     }
 
     m_tempBuffer = tempList;
     m_humBuffer = humList;
     m_lightBuffer = lightList;
-    m_pm25Buffer = pm25List;
-    m_pm10Buffer = pm10List;
-    m_aqiBuffer = aqiList;
+    m_mq135Buffer = mq135List;
+    m_zp01Buffer = zp01List;
 
     Logger::instance()->debug("DB", QString("Loaded %1 records from database").arg(m_tempBuffer.size()));
     return true;
 }
 
-bool Backstage::updateDatabase(double t, double h, double light, double pm25, double pm10, double aqi) {
+bool Backstage::updateDatabase(double t, double h, double light, double mq135, double zp01) {
     if (!m_db.isOpen()) {
         qWarning() << "[DB] Database not open, cannot update";
         return false;
@@ -168,18 +161,17 @@ bool Backstage::updateDatabase(double t, double h, double light, double pm25, do
 
     QSqlQuery query(m_db);
     query.prepare(
-        "INSERT INTO sensor_data (timestamp, temp, hum, light, pm25, pm10, aqi) "
-        "VALUES (:timestamp, :temp, :hum, :light, :pm25, :pm10, :aqi)"
+        "INSERT INTO sensor_data (timestamp, temperature, humidity, light, mq135, zp01) "
+        "VALUES (:timestamp, :temperature, :humidity, :light, :mq135, :zp01)"
     );
 
     QString now = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
     query.bindValue(":timestamp", now);
-    query.bindValue(":temp", t);
-    query.bindValue(":hum", h);
+    query.bindValue(":temperature", t);
+    query.bindValue(":humidity", h);
     query.bindValue(":light", light);
-    query.bindValue(":pm25", pm25);
-    query.bindValue(":pm10", pm10);
-    query.bindValue(":aqi", aqi);
+    query.bindValue(":mq135", mq135);
+    query.bindValue(":zp01", zp01);
 
     if (!query.exec()) {
         qCritical() << "[DB] Failed to insert data:" << query.lastError().text();
@@ -199,13 +191,12 @@ void Backstage::processSnapshot() {
     updateBuf(m_tempBuffer, m_currentTemp);
     updateBuf(m_humBuffer, m_currentHum);
     updateBuf(m_lightBuffer, m_currentLight);
-    updateBuf(m_pm25Buffer, m_currentPM25);
-    updateBuf(m_pm10Buffer, m_currentPM10);
-    updateBuf(m_aqiBuffer, m_currentAQI);
+    updateBuf(m_zp01Buffer, m_currentZP01);
+    updateBuf(m_mq135Buffer, m_currentMQ135);
 
     // 只有在非模拟模式下才写入数据库和上传到服务器
     if (!m_mockMode) {
-        updateDatabase(m_currentTemp, m_currentHum, m_currentLight, m_currentPM25, m_currentPM10, m_currentAQI);
+        updateDatabase(m_currentTemp, m_currentHum, m_currentLight, m_currentMQ135, m_currentZP01);
         uploadToServer();
     }
 
@@ -218,8 +209,8 @@ void Backstage::uploadToServer() {
     data["temperature"] = m_currentTemp;
     data["humidity"] = m_currentHum;
     data["light"] = m_currentLight;
-    data["gas"] = m_currentGas;
-    data["air_quality"] = m_currentAQI;
+    data["mq135"] = m_currentMQ135;
+    data["zp01"] = m_currentZP01;
 
     Logger::instance()->info("UPLOAD", "Preparing to upload sensor data to server");
     m_networkManager->uploadData(data);
@@ -239,16 +230,12 @@ double Backstage::getLight() const {
     return m_currentLight;
 }
 
-double Backstage::getPM25() const {
-    return m_currentPM25;
+double Backstage::getZP01() const {
+    return m_currentZP01;
 }
 
-double Backstage::getPM10() const {
-    return m_currentPM10;
-}
-
-double Backstage::getAQI() const {
-    return m_currentAQI;
+double Backstage::getMQ135() const {
+    return m_currentMQ135;
 }
 
 void Backstage::setTemp(double temp) {
@@ -263,24 +250,12 @@ void Backstage::setLight(double light) {
     m_currentLight = light;
 }
 
-void Backstage::setPM25(double pm25) {
-    m_currentPM25 = pm25;
+void Backstage::setZP01(double zp01) {
+    m_currentZP01 = zp01;
 }
 
-void Backstage::setPM10(double pm10) {
-    m_currentPM10 = pm10;
-}
-
-void Backstage::setAQI(double aqi) {
-    m_currentAQI = aqi;
-}
-
-double Backstage::getGas() const {
-    return m_currentGas;
-}
-
-void Backstage::setGas(double gas) {
-    m_currentGas = gas;
+void Backstage::setMQ135(double mq135) {
+    m_currentMQ135 = mq135;
 }
 
 QList<double> Backstage::getTempBuffer() const {
@@ -295,16 +270,12 @@ QList<double> Backstage::getLightBuffer() const {
     return m_lightBuffer;
 }
 
-QList<double> Backstage::getPM25Buffer() const {
-    return m_pm25Buffer;
+QList<double> Backstage::getZP01Buffer() const {
+    return m_zp01Buffer;
 }
 
-QList<double> Backstage::getPM10Buffer() const {
-    return m_pm10Buffer;
-}
-
-QList<double> Backstage::getAQIBuffer() const {
-    return m_aqiBuffer;
+QList<double> Backstage::getMQ135Buffer() const {
+    return m_mq135Buffer;
 }
 
 int Backstage::getMsPerPoint() const {
@@ -349,8 +320,8 @@ void Backstage::clearTempBuffer() {
     
     if (m_db.isOpen()) {
         QSqlQuery query(m_db);
-        if (!query.exec("UPDATE sensor_data SET temp = NULL")) {
-            Logger::instance()->warning("DB", QString("Failed to clear temp in database: %1").arg(query.lastError().text()));
+        if (!query.exec("UPDATE sensor_data SET temperature = NULL")) {
+            Logger::instance()->warning("DB", QString("Failed to clear temperature in database: %1").arg(query.lastError().text()));
         }
     }
 }
@@ -360,8 +331,8 @@ void Backstage::clearHumBuffer() {
     
     if (m_db.isOpen()) {
         QSqlQuery query(m_db);
-        if (!query.exec("UPDATE sensor_data SET hum = NULL")) {
-            Logger::instance()->warning("DB", QString("Failed to clear hum in database: %1").arg(query.lastError().text()));
+        if (!query.exec("UPDATE sensor_data SET humidity = NULL")) {
+            Logger::instance()->warning("DB", QString("Failed to clear humidity in database: %1").arg(query.lastError().text()));
         }
     }
 }
@@ -377,35 +348,24 @@ void Backstage::clearLightBuffer() {
     }
 }
 
-void Backstage::clearPM25Buffer() {
-    m_pm25Buffer.clear();
+void Backstage::clearZP01Buffer() {
+    m_zp01Buffer.clear();
     
     if (m_db.isOpen()) {
         QSqlQuery query(m_db);
-        if (!query.exec("UPDATE sensor_data SET pm25 = NULL")) {
-            Logger::instance()->warning("DB", QString("Failed to clear pm25 in database: %1").arg(query.lastError().text()));
+        if (!query.exec("UPDATE sensor_data SET zp01 = NULL")) {
+            Logger::instance()->warning("DB", QString("Failed to clear zp01 in database: %1").arg(query.lastError().text()));
         }
     }
 }
 
-void Backstage::clearPM10Buffer() {
-    m_pm10Buffer.clear();
+void Backstage::clearMQ135Buffer() {
+    m_mq135Buffer.clear();
     
     if (m_db.isOpen()) {
         QSqlQuery query(m_db);
-        if (!query.exec("UPDATE sensor_data SET pm10 = NULL")) {
-            Logger::instance()->warning("DB", QString("Failed to clear pm10 in database: %1").arg(query.lastError().text()));
-        }
-    }
-}
-
-void Backstage::clearAQIBuffer() {
-    m_aqiBuffer.clear();
-    
-    if (m_db.isOpen()) {
-        QSqlQuery query(m_db);
-        if (!query.exec("UPDATE sensor_data SET aqi = NULL")) {
-            Logger::instance()->warning("DB", QString("Failed to clear aqi in database: %1").arg(query.lastError().text()));
+        if (!query.exec("UPDATE sensor_data SET mq135 = NULL")) {
+            Logger::instance()->warning("DB", QString("Failed to clear mq135 in database: %1").arg(query.lastError().text()));
         }
     }
 }
@@ -414,9 +374,8 @@ void Backstage::clearAllBuffers() {
     clearTempBuffer();
     clearHumBuffer();
     clearLightBuffer();
-    clearPM25Buffer();
-    clearPM10Buffer();
-    clearAQIBuffer();
+    clearZP01Buffer();
+    clearMQ135Buffer();
     emit bufferSig();
 }
 
@@ -437,34 +396,16 @@ void Backstage::handleLight(const QVariantMap &data) {
     emit valueSig();
 }
 
-double Backstage::calculateAQI(double pm25) {
-    if (pm25 <= 35) return pm25 * 50 / 35;
-    if (pm25 <= 75) return 50 + (pm25 - 35) * 50 / 40;
-    if (pm25 <= 115) return 100 + (pm25 - 75) * 50 / 40;
-    if (pm25 <= 150) return 150 + (pm25 - 115) * 50 / 35;
-    if (pm25 <= 250) return 200 + (pm25 - 150) * 100 / 100;
-    return 300 + (pm25 - 250) * 200 / 250;
-}
-
 void Backstage::handleZP(const QVariantMap &data) {
-    double pm25 = m_currentPM25;
-    if (data.contains("pm25")) {
-        pm25 = data["pm25"].toDouble();
-        setPM25(pm25);
+    if (data.contains("zp01")) {
+        setZP01(data["zp01"].toDouble());
     }
-    if (data.contains("pm10")) {
-        setPM10(data["pm10"].toDouble());
-    }
-    
-    double aqi = calculateAQI(pm25);
-    setAQI(aqi);
-    
     emit valueSig();
 }
 
 void Backstage::handleMQ135(const QVariantMap &data) {
-    if (data.contains("gas")) {
-        setGas(data["gas"].toDouble());
+    if (data.contains("mq135")) {
+        setMQ135(data["mq135"].toDouble());
     }
     emit valueSig();
 }

@@ -74,25 +74,21 @@ void ZPSensor::readData() {
 
         float voltage = raw * scale / 1000.0;
 
-        // 模拟 PM2.5 和 PM10 值
-        float pm25 = voltage * 50.0;
-        float pm10 = pm25 * 1.5;
+        // 计算 zp01 值（基于 PM2.5 计算）
+        float zp01 = voltage * 50.0;
 
         QVariantMap data;
-        data["pm25"] = pm25;
-        data["pm10"] = pm10;
+        data["zp01"] = zp01;
         data["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
         data["hardware"] = true;
         emit valueSig(data);
 #endif
     } else {
         m_tick += 0.1;
-        double mockPM25 = 10.0 + 20.0 * qSin(m_tick);
-        double mockPM10 = mockPM25 * 1.5;
+        double mockZP01 = 10.0 + 20.0 * qSin(m_tick);
 
         QVariantMap data;
-        data["pm25"] = mockPM25;
-        data["pm10"] = mockPM10;
+        data["zp01"] = mockZP01;
         data["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
         data["hardware"] = false;
         emit valueSig(data);

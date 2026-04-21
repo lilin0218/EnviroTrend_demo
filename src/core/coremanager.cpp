@@ -211,16 +211,12 @@ QString CoreManager::lightStr() const {
     return QString::number(m_backstage->getLight(), 'f', 2);
 }
 
-QString CoreManager::pm25Str() const {
-    return QString::number(m_backstage->getPM25(), 'f', 1);
+QString CoreManager::zp01Str() const {
+    return QString::number(m_backstage->getZP01(), 'f', 1);
 }
 
-QString CoreManager::pm10Str() const {
-    return QString::number(m_backstage->getPM10(), 'f', 1);
-}
-
-QString CoreManager::aqiStr() const {
-    return QString::number(m_backstage->getAQI(), 'f', 1);
+QString CoreManager::mq135Str() const {
+    return QString::number(m_backstage->getMQ135(), 'f', 1);
 }
 
 QList<double> CoreManager::tempBuffer() const {
@@ -235,16 +231,12 @@ QList<double> CoreManager::lightBuffer() const {
     return m_backstage->getLightBuffer();
 }
 
-QList<double> CoreManager::pm25Buffer() const {
-    return m_backstage->getPM25Buffer();
+QList<double> CoreManager::zp01Buffer() const {
+    return m_backstage->getZP01Buffer();
 }
 
-QList<double> CoreManager::pm10Buffer() const {
-    return m_backstage->getPM10Buffer();
-}
-
-QList<double> CoreManager::aqiBuffer() const {
-    return m_backstage->getAQIBuffer();
+QList<double> CoreManager::mq135Buffer() const {
+    return m_backstage->getMQ135Buffer();
 }
 
 QVariantList CoreManager::predictedTempList() const {

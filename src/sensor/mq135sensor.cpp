@@ -74,21 +74,21 @@ void MQ135Sensor::readData() {
 
         float voltage = raw * scale / 1000.0;
 
-        // 计算有害气体浓度 (ppm)
-        float gas = voltage * 200.0;
+        // 计算 mq135 有害气体浓度 (ppm)
+        float mq135 = voltage * 200.0;
 
         QVariantMap data;
-        data["gas"] = gas;
+        data["mq135"] = mq135;
         data["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
         data["hardware"] = true;
         emit valueSig(data);
 #endif
     } else {
         m_tick += 0.1;
-        double mockGas = 30.0 + 20.0 * qSin(m_tick);
+        double mockMQ135 = 30.0 + 20.0 * qSin(m_tick);
 
         QVariantMap data;
-        data["gas"] = mockGas;
+        data["mq135"] = mockMQ135;
         data["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
         data["hardware"] = false;
         emit valueSig(data);

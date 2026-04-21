@@ -79,23 +79,23 @@ Rectangle {
                     predictList: []
                 }
 
-                // 4. 有害气体图表
+                // 4. MQ135 (气体颗粒物)图表
                 TrendChart {
-                    id: aqiChart
-                    title: "有害气体趋势 (AQI)"
+                    id: mq135Chart
+                    title: "MQ135 (气体颗粒物)趋势 (ppm)"
                     limitMinY: 0.0
-                    limitMaxY: 200.0
-                    dataBuffer: core.aqiBuffer
+                    limitMaxY: 100.0
+                    dataBuffer: core.mq135Buffer
                     predictList: []
                 }
 
-                // 5. 空气质量图表
+                // 5. ZP01 (空气质量)图表
                 TrendChart {
-                    id: pm25Chart
-                    title: "空气质量趋势 (μg/m³)"
+                    id: zp01Chart
+                    title: "ZP01 (空气质量)趋势 (μg/m³)"
                     limitMinY: 0.0
                     limitMaxY: 100.0
-                    dataBuffer: core.pm25Buffer
+                    dataBuffer: core.zp01Buffer
                     predictList: []
                 }
 

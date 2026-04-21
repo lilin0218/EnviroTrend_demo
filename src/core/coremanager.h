@@ -20,15 +20,13 @@ class CoreManager : public QObject {
     Q_PROPERTY(QString tempStr READ tempStr NOTIFY valueSig)
     Q_PROPERTY(QString humStr READ humStr NOTIFY valueSig)
     Q_PROPERTY(QString lightStr READ lightStr NOTIFY valueSig)
-    Q_PROPERTY(QString pm25Str READ pm25Str NOTIFY valueSig)
-    Q_PROPERTY(QString pm10Str READ pm10Str NOTIFY valueSig)
-    Q_PROPERTY(QString aqiStr READ aqiStr NOTIFY valueSig)
+    Q_PROPERTY(QString zp01Str READ zp01Str NOTIFY valueSig)
+    Q_PROPERTY(QString mq135Str READ mq135Str NOTIFY valueSig)
     Q_PROPERTY(QList<double> tempBuffer READ tempBuffer NOTIFY bufferSig)
     Q_PROPERTY(QList<double> humBuffer READ humBuffer NOTIFY bufferSig)
     Q_PROPERTY(QList<double> lightBuffer READ lightBuffer NOTIFY bufferSig)
-    Q_PROPERTY(QList<double> pm25Buffer READ pm25Buffer NOTIFY bufferSig)
-    Q_PROPERTY(QList<double> pm10Buffer READ pm10Buffer NOTIFY bufferSig)
-    Q_PROPERTY(QList<double> aqiBuffer READ aqiBuffer NOTIFY bufferSig)
+    Q_PROPERTY(QList<double> zp01Buffer READ zp01Buffer NOTIFY bufferSig)
+    Q_PROPERTY(QList<double> mq135Buffer READ mq135Buffer NOTIFY bufferSig)
     Q_PROPERTY(QVariantList predictedTempList READ predictedTempList NOTIFY predictionUpdated)
     Q_PROPERTY(QVariantList predictedHumList READ predictedHumList NOTIFY predictionUpdated)
     Q_PROPERTY(bool isAiBusy READ isAiBusy NOTIFY aiStatusChanged)
@@ -56,15 +54,13 @@ public:
     QString tempStr() const;
     QString humStr() const;
     QString lightStr() const;
-    QString pm25Str() const;
-    QString pm10Str() const;
-    QString aqiStr() const;
+    QString zp01Str() const;
+    QString mq135Str() const;
     QList<double> tempBuffer() const;
     QList<double> humBuffer() const;
     QList<double> lightBuffer() const;
-    QList<double> pm25Buffer() const;
-    QList<double> pm10Buffer() const;
-    QList<double> aqiBuffer() const;
+    QList<double> zp01Buffer() const;
+    QList<double> mq135Buffer() const;
     QVariantList predictedTempList() const;
     QVariantList predictedHumList() const;
     qint64 baseTime() const;
