@@ -48,8 +48,29 @@ def predict():
     device = get_device()
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    models_dir = os.path.join(base_dir, "models")
-    db_path = os.path.join(os.path.dirname(base_dir), "dbData", "enviro_data.db")
+    current_work_dir = os.getcwd()
+
+    db_path = None
+    models_dir = None
+
+    search_paths = [
+        current_work_dir,
+        os.path.dirname(base_dir),
+        os.path.dirname(os.path.dirname(base_dir)),
+    ]
+
+    for search_dir in search_paths:
+        candidate_db = os.path.join(search_dir, "dbData", "enviro_data.db")
+        candidate_models = os.path.join(search_dir, "models")
+
+        if os.path.exists(candidate_db) and os.path.exists(candidate_models):
+            db_path = candidate_db
+            models_dir = candidate_models
+            break
+
+    if db_path is None or models_dir is None:
+        db_path = os.path.join(os.path.dirname(base_dir), "dbData", "enviro_data.db")
+        models_dir = os.path.join(base_dir, "models")
 
     scaler_path = os.path.join(models_dir, "scaler_params.json")
     model_path = os.path.join(models_dir, "enviro_model.pth")
@@ -71,10 +92,10 @@ def predict():
 
     conn = sqlite3.connect(db_path)
     query = """
-        SELECT timestamp, temperature, humidity, light, mq135, zp01 
-        FROM environmental_data 
+        SELECT timestamp, temperature, humidity, light, mq135, zp01
+        FROM sensor_data
         WHERE temperature IS NOT NULL AND humidity IS NOT NULL AND light IS NOT NULL AND mq135 IS NOT NULL AND zp01 IS NOT NULL
-        ORDER BY timestamp DESC 
+        ORDER BY timestamp DESC
         LIMIT 2000
     """
     df = pd.read_sql_query(query, conn)

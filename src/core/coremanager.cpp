@@ -66,15 +66,25 @@ CoreManager::CoreManager(QObject *parent) : QObject(parent),
         m_aiStdoutBuffer.append(m_predictProcess->readAllStandardOutput());
     });
 
+    connect(m_predictProcess, &QProcess::readyReadStandardError, this, [this]() {
+        m_aiStderrBuffer.append(m_predictProcess->readAllStandardError());
+    });
+
     connect(m_predictProcess, &QProcess::errorOccurred, this, &CoreManager::handleProcessError);
 
     connect(m_predictProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, [this](int exitCode, QProcess::ExitStatus exitStatus){
         Q_UNUSED(exitStatus);
         qDebug() << "[AI] Process finished. Exit code:" << exitCode
-                 << "stdout bytes:" << m_aiStdoutBuffer.size();
+                 << "stdout bytes:" << m_aiStdoutBuffer.size()
+                 << "stderr bytes:" << m_aiStderrBuffer.size();
+        if (!m_aiStderrBuffer.isEmpty()) {
+            Logger::instance()->error("AI", QString("Prediction stderr: %1").arg(QString(m_aiStderrBuffer)));
+            qDebug() << "[AI] Stderr:" << m_aiStderrBuffer;
+        }
         handleProcessOutput();
         m_aiStdoutBuffer.clear();
+        m_aiStderrBuffer.clear();
         m_isAiBusy = false;
         emit aiStatusChanged();
     });
@@ -116,10 +126,18 @@ void CoreManager::runPrediction() {
     emit aiStatusChanged();
 
     QStringList args;
-    args << scriptPath << "1440" << "60";
+//    args << scriptPath << "1440" << "60";
+    args << scriptPath << "144" << "60";
 
     Logger::instance()->info("AI", QString("Starting prediction. args: %1").arg(args.join(", ")));
-    m_predictProcess->start("python3", args);
+    
+    QString pythonPath = "python3";
+    QFileInfo python3InPath("/usr/bin/python3");
+    if (python3InPath.exists()) {
+        pythonPath = "/usr/bin/python3";
+    }
+    
+    m_predictProcess->start(pythonPath, args);
     if (!m_predictProcess->waitForStarted(2000)) {
         Logger::instance()->error("AI", "Failed to start prediction process");
         m_isAiBusy = false;
@@ -166,11 +184,17 @@ void CoreManager::handleProcessOutput() {
         QJsonArray arr = doc.array();
         m_predictedTempList.clear();
         m_predictedHumList.clear();
+        m_predictedLightList.clear();
+        m_predictedMq135List.clear();
+        m_predictedZp01List.clear();
 
         for (int i = 0; i < arr.size(); ++i) {
             QJsonObject obj = arr[i].toObject();
-            m_predictedTempList << obj["temp"].toDouble();
-            m_predictedHumList << obj["hum"].toDouble();
+            m_predictedTempList << obj["temperature"].toDouble();
+            m_predictedHumList << obj["humidity"].toDouble();
+            m_predictedLightList << obj["light"].toDouble();
+            m_predictedMq135List << obj["mq135"].toDouble();
+            m_predictedZp01List << obj["zp01"].toDouble();
         }
 
         emit predictionUpdated();
@@ -245,6 +269,18 @@ QVariantList CoreManager::predictedTempList() const {
 
 QVariantList CoreManager::predictedHumList() const {
     return m_predictedHumList;
+}
+
+QVariantList CoreManager::predictedLightList() const {
+    return m_predictedLightList;
+}
+
+QVariantList CoreManager::predictedMq135List() const {
+    return m_predictedMq135List;
+}
+
+QVariantList CoreManager::predictedZp01List() const {
+    return m_predictedZp01List;
 }
 
 qint64 CoreManager::baseTime() const {

@@ -76,7 +76,7 @@ Rectangle {
                     limitMinY: 0.0
                     limitMaxY: 3.3
                     dataBuffer: core.lightBuffer
-                    predictList: []
+                    predictList: core.predictedLightList
                 }
 
                 // 4. MQ135 (气体颗粒物)图表
@@ -86,7 +86,7 @@ Rectangle {
                     limitMinY: 0.0
                     limitMaxY: 100.0
                     dataBuffer: core.mq135Buffer
-                    predictList: []
+                    predictList: core.predictedMq135List
                 }
 
                 // 5. ZP01 (空气质量)图表
@@ -96,7 +96,7 @@ Rectangle {
                     limitMinY: 0.0
                     limitMaxY: 100.0
                     dataBuffer: core.zp01Buffer
-                    predictList: []
+                    predictList: core.predictedZp01List
                 }
 
                 // 6. 噪音占位矩形

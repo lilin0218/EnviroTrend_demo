@@ -65,5 +65,5 @@ CMakeLists.txt.user
 # Log files
 来自开发板的日志
 
-# Database data files
-dbData/
+# Database data files (uncomment to ignore)
+# dbData/

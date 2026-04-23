@@ -29,6 +29,9 @@ class CoreManager : public QObject {
     Q_PROPERTY(QList<double> mq135Buffer READ mq135Buffer NOTIFY bufferSig)
     Q_PROPERTY(QVariantList predictedTempList READ predictedTempList NOTIFY predictionUpdated)
     Q_PROPERTY(QVariantList predictedHumList READ predictedHumList NOTIFY predictionUpdated)
+    Q_PROPERTY(QVariantList predictedLightList READ predictedLightList NOTIFY predictionUpdated)
+    Q_PROPERTY(QVariantList predictedMq135List READ predictedMq135List NOTIFY predictionUpdated)
+    Q_PROPERTY(QVariantList predictedZp01List READ predictedZp01List NOTIFY predictionUpdated)
     Q_PROPERTY(bool isAiBusy READ isAiBusy NOTIFY aiStatusChanged)
     Q_PROPERTY(qint64 baseTime READ baseTime NOTIFY predictionUpdated)
     Q_PROPERTY(bool isSensorActive READ isSensorActive NOTIFY sensorStatusChanged)
@@ -63,6 +66,9 @@ public:
     QList<double> mq135Buffer() const;
     QVariantList predictedTempList() const;
     QVariantList predictedHumList() const;
+    QVariantList predictedLightList() const;
+    QVariantList predictedMq135List() const;
+    QVariantList predictedZp01List() const;
     qint64 baseTime() const;
     bool isAiBusy() const;
     bool isSensorActive() const;
@@ -98,10 +104,14 @@ private:
     QProcess* m_predictProcess;
     QVariantList m_predictedTempList;
     QVariantList m_predictedHumList;
+    QVariantList m_predictedLightList;
+    QVariantList m_predictedMq135List;
+    QVariantList m_predictedZp01List;
     QVariantList m_logList;
     qint64 m_baseTime;
     bool m_isAiBusy;
     QByteArray m_aiStdoutBuffer;
+    QByteArray m_aiStderrBuffer;
 };
 
 #endif // COREMANAGER_H
