@@ -50,5 +50,7 @@
         <file>qml/components/CustomRangeSlider.qml</file>
         <file>qml/components/CustomButton.qml</file>
         <file>qml/pages/LogPage/LogPage.qml</file>
+        <file>qml/pages/AlarmPage/AlarmPage.qml</file>
+        <file>qml/pages/AlarmPage/AlarmCard.qml</file>
     </qresource>
 </RCC>

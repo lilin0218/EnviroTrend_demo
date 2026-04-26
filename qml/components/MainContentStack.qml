@@ -4,6 +4,7 @@ import "../common"
 import "../pages/DashboardPage"
 import "../pages/TrendPage"
 import "../pages/LogPage"
+import "../pages/AlarmPage"
 
 Item {
     id: contentRoot
@@ -86,23 +87,20 @@ Item {
             }
         }
 
-        // --- 页面索引 3：系统设置 (Settings) ---
+        // --- 页面索引 3：预警监控 (Alarm) ---
         Rectangle {
-            id: pageSettings
+            id: pageAlarm
             color: "transparent"
 
-            // 背景图
             Image {
                 anchors.fill: parent
                 source: "qrc:/res/bg/bg_purple.png"
                 opacity: 0.5
             }
 
-            Text {
-                text: "System Settings"
-                color: Theme.textSecondary
-                anchors.centerIn: parent
-                font.pixelSize: Theme.sizeTitle
+            AlarmPage {
+                id: alarmPage
+                anchors.fill: parent
             }
         }
 

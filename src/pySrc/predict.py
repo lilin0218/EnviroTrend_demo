@@ -48,41 +48,20 @@ def predict():
     device = get_device()
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    current_work_dir = os.getcwd()
-
-    db_path = None
-    models_dir = None
-
-    search_paths = [
-        current_work_dir,
-        os.path.dirname(base_dir),
-        os.path.dirname(os.path.dirname(base_dir)),
-    ]
-
-    for search_dir in search_paths:
-        candidate_db = os.path.join(search_dir, "dbData", "enviro_data.db")
-        candidate_models = os.path.join(search_dir, "models")
-
-        if os.path.exists(candidate_db) and os.path.exists(candidate_models):
-            db_path = candidate_db
-            models_dir = candidate_models
-            break
-
-    if db_path is None or models_dir is None:
-        db_path = os.path.join(os.path.dirname(base_dir), "dbData", "enviro_data.db")
-        models_dir = os.path.join(base_dir, "models")
+    models_dir = os.path.join(base_dir, "models")
+    db_path = os.path.join(os.path.dirname(base_dir), "dbData", "enviro_data.db")
 
     scaler_path = os.path.join(models_dir, "scaler_params.json")
     model_path = os.path.join(models_dir, "enviro_model.pth")
 
     if not os.path.exists(scaler_path):
-        print(f"[PREDICT] scaler_params.json not found at {scaler_path}")
+        print(f"[PREDICT] 未找到 scaler_params.json 文件: {scaler_path}")
         return
     if not os.path.exists(model_path):
-        print(f"[PREDICT] enviro_model.pth not found at {model_path}")
+        print(f"[PREDICT] 未找到 enviro_model.pth 文件: {model_path}")
         return
     if not os.path.exists(db_path):
-        print(f"[PREDICT] SQLite database not found at {db_path}")
+        print(f"[PREDICT] 未找到 SQLite 数据库: {db_path}")
         return
 
     with open(scaler_path, "r") as f:
@@ -92,17 +71,17 @@ def predict():
 
     conn = sqlite3.connect(db_path)
     query = """
-        SELECT timestamp, temperature, humidity, light, mq135, zp01
-        FROM sensor_data
+        SELECT timestamp, temperature, humidity, light, mq135, zp01 
+        FROM sensor_data 
         WHERE temperature IS NOT NULL AND humidity IS NOT NULL AND light IS NOT NULL AND mq135 IS NOT NULL AND zp01 IS NOT NULL
-        ORDER BY timestamp DESC
+        ORDER BY timestamp DESC 
         LIMIT 2000
     """
     df = pd.read_sql_query(query, conn)
     conn.close()
 
     if df.empty or len(df) < 2:
-        print("[PREDICT] Insufficient data in database")
+        print("[PREDICT] 数据库中数据不足")
         return
 
     df = df.sort_values("timestamp").reset_index(drop=True)
