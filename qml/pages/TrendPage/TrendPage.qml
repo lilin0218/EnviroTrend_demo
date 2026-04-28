@@ -55,8 +55,9 @@ Rectangle {
                     limitMinY: 15.0
                     limitMaxY: 25.0
                     // X 轴滑动条上限
-                    dataBuffer: core.tempBuffer
+                    dataBuffer: core.sampledTempBuffer
                     predictList: core.predictedTempList
+                    sampleStep: core.sampleStep
                 }
 
                 // 2. 湿度图表
@@ -65,8 +66,9 @@ Rectangle {
                     title: "湿度趋势 (%)"
                     limitMinY: 50.0
                     limitMaxY: 80.0
-                    dataBuffer: core.humBuffer
+                    dataBuffer: core.sampledHumBuffer
                     predictList: core.predictedHumList
+                    sampleStep: core.sampleStep
                 }
 
                 // 3. 光照图表
@@ -75,8 +77,9 @@ Rectangle {
                     title: "光照趋势 (V)"
                     limitMinY: 0.0
                     limitMaxY: 3.3
-                    dataBuffer: core.lightBuffer
+                    dataBuffer: core.sampledLightBuffer
                     predictList: core.predictedLightList
+                    sampleStep: core.sampleStep
                 }
 
                 // 4. MQ135 (气体颗粒物)图表
@@ -85,8 +88,9 @@ Rectangle {
                     title: "MQ135 (气体颗粒物)趋势 (ppm)"
                     limitMinY: 0.0
                     limitMaxY: 100.0
-                    dataBuffer: core.mq135Buffer
+                    dataBuffer: core.sampledMq135Buffer
                     predictList: core.predictedMq135List
+                    sampleStep: core.sampleStep
                 }
 
                 // 5. ZP01 (空气质量)图表
@@ -95,8 +99,9 @@ Rectangle {
                     title: "ZP01 (空气质量)趋势 (μg/m³)"
                     limitMinY: 0.0
                     limitMaxY: 100.0
-                    dataBuffer: core.zp01Buffer
+                    dataBuffer: core.sampledZp01Buffer
                     predictList: core.predictedZp01List
+                    sampleStep: core.sampleStep
                 }
 
                 // 6. 噪音占位矩形

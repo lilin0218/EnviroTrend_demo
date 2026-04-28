@@ -34,6 +34,12 @@ class CoreManager : public QObject {
     Q_PROPERTY(QVariantList predictedZp01List READ predictedZp01List NOTIFY predictionUpdated)
     Q_PROPERTY(bool isAiBusy READ isAiBusy NOTIFY aiStatusChanged)
     Q_PROPERTY(qint64 baseTime READ baseTime NOTIFY predictionUpdated)
+    Q_PROPERTY(int sampleStep READ sampleStep CONSTANT)
+    Q_PROPERTY(QVariantList sampledTempBuffer READ sampledTempBuffer NOTIFY sampledBufferUpdated)
+    Q_PROPERTY(QVariantList sampledHumBuffer READ sampledHumBuffer NOTIFY sampledBufferUpdated)
+    Q_PROPERTY(QVariantList sampledLightBuffer READ sampledLightBuffer NOTIFY sampledBufferUpdated)
+    Q_PROPERTY(QVariantList sampledMq135Buffer READ sampledMq135Buffer NOTIFY sampledBufferUpdated)
+    Q_PROPERTY(QVariantList sampledZp01Buffer READ sampledZp01Buffer NOTIFY sampledBufferUpdated)
     Q_PROPERTY(bool isSensorActive READ isSensorActive NOTIFY sensorStatusChanged)
     Q_PROPERTY(bool isNetworkConnected READ isNetworkConnected NOTIFY networkStatusChanged)
     Q_PROPERTY(QVariantList logList READ logList NOTIFY logListUpdated)
@@ -71,6 +77,12 @@ public:
     QVariantList predictedZp01List() const;
     qint64 baseTime() const;
     bool isAiBusy() const;
+    int sampleStep() const;
+    QVariantList sampledTempBuffer() const;
+    QVariantList sampledHumBuffer() const;
+    QVariantList sampledLightBuffer() const;
+    QVariantList sampledMq135Buffer() const;
+    QVariantList sampledZp01Buffer() const;
     bool isSensorActive() const;
     bool isNetworkConnected() const;
     QVariantList logList() const;
@@ -78,6 +90,7 @@ public:
 signals:
     void valueSig();
     void bufferSig();
+    void sampledBufferUpdated();
     void sensorSig(int id);
     void predictionUpdated();
     void aiStatusChanged();
@@ -88,6 +101,7 @@ signals:
 
 private slots:
     void onBackstageDataChanged();
+    void onSampledBufferUpdated();
     void handleProcessOutput();
     void handleProcessError(QProcess::ProcessError error);
     void handleSensorError(const QString &error);

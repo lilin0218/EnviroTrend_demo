@@ -52,6 +52,16 @@ public:
     // 返回当前每个历史数据点时间间隔
     int getMsPerPoint() const;
 
+    // 获取数据预处理步长（每隔n个点取一个）
+    int getSampleStep() const;
+
+    // 获取预处理后的数据（QML直接使用）
+    QVariantList getSampledTempBuffer() const;
+    QVariantList getSampledHumBuffer() const;
+    QVariantList getSampledLightBuffer() const;
+    QVariantList getSampledZp01Buffer() const;
+    QVariantList getSampledMq135Buffer() const;
+
     // 设置是否在模拟模式
     void setMockMode(bool mockMode);
     bool isMockMode() const;
@@ -101,6 +111,7 @@ private:
     QTimer *m_sampleTimer;
     const int MAX_POINTS_24H;
     const int m_msPerPoint;
+    const int m_sampleStep;
 
     bool m_mockMode;
     NetworkManager *m_networkManager;

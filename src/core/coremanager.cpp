@@ -29,6 +29,7 @@ CoreManager::CoreManager(QObject *parent) : QObject(parent),
     
     connect(m_backstage, &Backstage::valueSig, this, &CoreManager::onBackstageDataChanged);
     connect(m_backstage, &Backstage::bufferSig, this, &CoreManager::bufferSig);
+    connect(m_backstage, &Backstage::bufferSig, this, &CoreManager::onSampledBufferUpdated);
     
     connect(m_dht11, &DHT11::errorOccurred, this, &CoreManager::handleSensorError);
     connect(m_lightSensor, &LightSensor::errorOccurred, this, &CoreManager::handleSensorError);
@@ -301,6 +302,34 @@ bool CoreManager::isNetworkConnected() const {
 
 int CoreManager::getMsPerPoint() const {
     return m_backstage->getMsPerPoint();
+}
+
+void CoreManager::onSampledBufferUpdated() {
+    emit sampledBufferUpdated();
+}
+
+int CoreManager::sampleStep() const {
+    return m_backstage->getSampleStep();
+}
+
+QVariantList CoreManager::sampledTempBuffer() const {
+    return m_backstage->getSampledTempBuffer();
+}
+
+QVariantList CoreManager::sampledHumBuffer() const {
+    return m_backstage->getSampledHumBuffer();
+}
+
+QVariantList CoreManager::sampledLightBuffer() const {
+    return m_backstage->getSampledLightBuffer();
+}
+
+QVariantList CoreManager::sampledMq135Buffer() const {
+    return m_backstage->getSampledMq135Buffer();
+}
+
+QVariantList CoreManager::sampledZp01Buffer() const {
+    return m_backstage->getSampledZp01Buffer();
 }
 
 void CoreManager::onBackstageDataChanged() {

@@ -13,6 +13,7 @@ Backstage::Backstage(QObject *parent)
       m_currentMQ135(0.0),
       MAX_POINTS_24H(1440),
       m_msPerPoint(60000),
+      m_sampleStep(5),
       m_mockMode(false),
       m_networkManager(NetworkManager::instance()) {
 
@@ -408,4 +409,48 @@ void Backstage::handleMQ135(const QVariantMap &data) {
         setMQ135(data["mq135"].toDouble());
     }
     emit valueSig();
+}
+
+int Backstage::getSampleStep() const {
+    return m_sampleStep;
+}
+
+QVariantList Backstage::getSampledTempBuffer() const {
+    QVariantList result;
+    for (int i = 0; i < m_tempBuffer.size(); i += m_sampleStep) {
+        result.append(m_tempBuffer.at(i));
+    }
+    return result;
+}
+
+QVariantList Backstage::getSampledHumBuffer() const {
+    QVariantList result;
+    for (int i = 0; i < m_humBuffer.size(); i += m_sampleStep) {
+        result.append(m_humBuffer.at(i));
+    }
+    return result;
+}
+
+QVariantList Backstage::getSampledLightBuffer() const {
+    QVariantList result;
+    for (int i = 0; i < m_lightBuffer.size(); i += m_sampleStep) {
+        result.append(m_lightBuffer.at(i));
+    }
+    return result;
+}
+
+QVariantList Backstage::getSampledZp01Buffer() const {
+    QVariantList result;
+    for (int i = 0; i < m_zp01Buffer.size(); i += m_sampleStep) {
+        result.append(m_zp01Buffer.at(i));
+    }
+    return result;
+}
+
+QVariantList Backstage::getSampledMq135Buffer() const {
+    QVariantList result;
+    for (int i = 0; i < m_mq135Buffer.size(); i += m_sampleStep) {
+        result.append(m_mq135Buffer.at(i));
+    }
+    return result;
 }

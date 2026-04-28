@@ -14,9 +14,10 @@ Item {
     property color aiLineColor: "#FF9900"
 
     // 数据源
-    property var dataBuffer: []     // 真实数据
+    property var dataBuffer: []     // 真实数据（已预处理）
     property var predictList: []    // AI 预测数据（24小时量）
     property double predictBaseTime: 0 // 记录点击预测时的时间点
+    property int sampleStep: 5      // 采样步长（与C++保持一致）
 
     // 状态控制
     property bool isLongTerm: false // 当前是否为 24h 长时图
@@ -172,10 +173,10 @@ Item {
         }
     }
 
-    // 短时视图下：每秒让当前时间居中，形成连续滑动效果
+    // 短时视图下：每3秒更新一次（降低嵌入式设备CPU负载）
     Timer {
         id: shortViewTimer
-        interval: 1000
+        interval: 3000
         running: true
         repeat: true
         onTriggered: {
@@ -190,8 +191,8 @@ Item {
 
     function updateSeries() {
         if (!series || !axisX) return
-        var nowMs = Date.now() // 使用当前系统时间
-        var interval = 60000 // 默认1分钟
+        var nowMs = Date.now()
+        var interval = 60000 * root.sampleStep // 采样间隔 = 原始间隔 × 采样步长
 
         // 1. 设置 X 轴范围
         if (root.isLongTerm) {
@@ -221,7 +222,7 @@ Item {
         series.clear()
         if (totalCount > 0) {
             for (var i = 0; i < totalCount; i += step) {
-                // 时间戳计算：假设 buffer 最后一点是当前时间
+                // 时间戳计算：dataBuffer最后一点对应当前时间，每隔interval一个点
                 var pTime = nowMs - (totalCount - 1 - i) * interval
                 if (pTime >= axisX.min.getTime() && pTime <= axisX.max.getTime()) {
                     series.append(pTime, dataBuffer[i])
