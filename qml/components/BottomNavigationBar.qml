@@ -39,14 +39,14 @@ Rectangle {
 
         NavButton {
             iconBaseName: "navLocation"
-            labelText: "地理位置"
+            labelText: "日志系统"
             isActive: currentIndex === 2
             onClicked: currentIndex = 2
         }
 
         NavButton {
             iconBaseName: "navSettings"
-            labelText: "系统设置"
+            labelText: "预警系统"
             isActive: currentIndex === 3
             onClicked: currentIndex = 3
         }

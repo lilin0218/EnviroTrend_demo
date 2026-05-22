@@ -35,11 +35,11 @@ public:
     void setMQ135(double mq135);
 
     // 为 Core 提供数据访问
-    QList<double> getTempBuffer() const;
-    QList<double> getHumBuffer() const;
-    QList<double> getLightBuffer() const;
-    QList<double> getZP01Buffer() const;
-    QList<double> getMQ135Buffer() const;
+    QList<QVariant> getTempBuffer() const;
+    QList<QVariant> getHumBuffer() const;
+    QList<QVariant> getLightBuffer() const;
+    QList<QVariant> getZP01Buffer() const;
+    QList<QVariant> getMQ135Buffer() const;
 
     // 清空传感器buffer
     void clearTempBuffer();
@@ -96,11 +96,11 @@ private:
     QSqlDatabase m_db;
     QString m_dbPath;
 
-    QList<double> m_tempBuffer;
-    QList<double> m_humBuffer;
-    QList<double> m_lightBuffer;
-    QList<double> m_zp01Buffer;
-    QList<double> m_mq135Buffer;
+    QList<QVariant> m_tempBuffer;
+    QList<QVariant> m_humBuffer;
+    QList<QVariant> m_lightBuffer;
+    QList<QVariant> m_zp01Buffer;
+    QList<QVariant> m_mq135Buffer;
 
     double m_currentTemp;
     double m_currentHum;

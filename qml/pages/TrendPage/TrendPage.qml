@@ -1,11 +1,31 @@
 import QtQuick 2.11
 import QtQuick.Layouts 1.0
 import "../../common"
-// 注意：由于 TrendChart 和 SideAnchorBar 在同级目录下，直接引用即可
 
 Rectangle {
     id: root
     color: "transparent"
+
+    // 当前选中的传感器索引
+    property int currentIndex: 0
+
+    // 当前传感器配置
+    property string currentTitle: "温度趋势 (°C)"
+    property double currentLimitMinY: -10.0
+    property double currentLimitMaxY: 40.0
+    property var currentDataBuffer: core.sampledTempBuffer
+    property var currentPredictList: core.predictedTempList
+
+    // 传感器配置数组 - 使用ListModel替代var声明
+    ListModel {
+        id: sensorConfigs
+        ListElement { title: "温度趋势 (°C)"; limitMinY: -10.0; limitMaxY: 40.0; bufferType: "temp" }
+        ListElement { title: "湿度趋势 (%)"; limitMinY: 0.0; limitMaxY: 100.0; bufferType: "hum" }
+        ListElement { title: "光照趋势 (V)"; limitMinY: 0.0; limitMaxY: 5.0; bufferType: "light" }
+        ListElement { title: "MQ135 (气体颗粒物)趋势 (ppm)"; limitMinY: 0.0; limitMaxY: 500.0; bufferType: "mq135" }
+        ListElement { title: "ZP01 (空气质量)趋势 (μg/m³)"; limitMinY: 0.0; limitMaxY: 300.0; bufferType: "zp01" }
+        ListElement { title: "噪音趋势 (db)"; limitMinY: 0.0; limitMaxY: 120.0; bufferType: "noise" }
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -16,137 +36,84 @@ Rectangle {
             id: sideBar
             Layout.fillHeight: true
             Layout.preferredWidth: 90
+            currentIndex: root.currentIndex
 
-            // 联动逻辑：点击左侧，右侧滚动
             onItemSelected: {
-                scrollToSection(index)
+                root.currentIndex = index;
             }
         }
 
-        // 2. 右侧：可滚动的图表展示区
-        Flickable {
-            id: chartFlickable
+        // 2. 右侧：单一图表展示区
+        Item {
+            id: chartContainer
             Layout.fillWidth: true
             Layout.fillHeight: true
-            contentWidth: width
-            contentHeight: chartColumn.height
-            clip: true
 
-            // 平滑滚动动画
-            Behavior on contentY {
-                NumberAnimation {
-                    duration: 500
-                    easing.type: Easing.OutQuint
+            // 噪音传感器页面
+            Rectangle {
+                id: noisePage
+                anchors.fill: parent
+                color: "transparent"
+                visible: currentIndex === 5
+
+                Text {
+                    text: "噪音传感器未启用"
+                    color: "#666666"
+                    font.pixelSize: 24
+                    anchors.centerIn: parent
                 }
             }
 
-            Column {
-                id: chartColumn
-                width: parent.width
-                spacing: 20
-                topPadding: 20
-                bottomPadding: 100
+            // 单一图表组件 - 只创建一个，根据选择动态切换数据源
+            TrendChart {
+                id: mainChart
+                anchors.fill: parent
+                visible: currentIndex !== 5
 
-                // 1. 温度图表
-                TrendChart {
-                    id: tempChart
-                    title: "温度趋势 (°C)"
-                    // Y 轴绝对边界
-                    limitMinY: 15.0
-                    limitMaxY: 25.0
-                    // X 轴滑动条上限
-                    dataBuffer: core.sampledTempBuffer
-                    predictList: core.predictedTempList
-                    sampleStep: core.sampleStep
-                }
-
-                // 2. 湿度图表
-                TrendChart {
-                    id: humChart
-                    title: "湿度趋势 (%)"
-                    limitMinY: 50.0
-                    limitMaxY: 80.0
-                    dataBuffer: core.sampledHumBuffer
-                    predictList: core.predictedHumList
-                    sampleStep: core.sampleStep
-                }
-
-                // 3. 光照图表
-                TrendChart {
-                    id: lightChart
-                    title: "光照趋势 (V)"
-                    limitMinY: 0.0
-                    limitMaxY: 3.3
-                    dataBuffer: core.sampledLightBuffer
-                    predictList: core.predictedLightList
-                    sampleStep: core.sampleStep
-                }
-
-                // 4. MQ135 (气体颗粒物)图表
-                TrendChart {
-                    id: mq135Chart
-                    title: "MQ135 (气体颗粒物)趋势 (ppm)"
-                    limitMinY: 0.0
-                    limitMaxY: 100.0
-                    dataBuffer: core.sampledMq135Buffer
-                    predictList: core.predictedMq135List
-                    sampleStep: core.sampleStep
-                }
-
-                // 5. ZP01 (空气质量)图表
-                TrendChart {
-                    id: zp01Chart
-                    title: "ZP01 (空气质量)趋势 (μg/m³)"
-                    limitMinY: 0.0
-                    limitMaxY: 100.0
-                    dataBuffer: core.sampledZp01Buffer
-                    predictList: core.predictedZp01List
-                    sampleStep: core.sampleStep
-                }
-
-                // 6. 噪音占位矩形
-                Rectangle {
-                    width: parent.width
-                    height: 300
-                    color: "#f0f0f0"
-                    border.color: "#d0d0d0"
-                    border.width: 1
-                    radius: 8
-                    
-                    Text {
-                        anchors.centerIn: parent
-                        text: "噪音传感器未启用"
-                        font.pointSize: 14
-                        color: "#606060"
-                    }
-                }
-            }
-
-            // 联动逻辑：手动滑动右侧时，自动更新左侧的高亮状态
-            onMovementEnded: {
-                updateSideBarIndex()
+                title: root.currentTitle
+                limitMinY: root.currentLimitMinY
+                limitMaxY: root.currentLimitMaxY
+                dataBuffer: root.currentDataBuffer
+                predictList: root.currentPredictList
+                sampleStep: core.sampleStep
             }
         }
     }
 
-    // --- 逻辑函数 ---
-
-    // 滚动到指定索引的图表
-    function scrollToSection(index) {
-        if (index < chartColumn.children.length) {
-            let targetItem = chartColumn.children[index];
-            chartFlickable.contentY = targetItem.y;
-        }
-    }
-
-    // 自动检测当前视口在哪个图表，同步左侧高亮
-    function updateSideBarIndex() {
-        let currentY = chartFlickable.contentY + 50; // 偏移量，提高识别灵敏度
-        for (var i = 0; i < chartColumn.children.length; i++) {
-            let item = chartColumn.children[i];
-            if (currentY >= item.y && currentY < (item.y + item.height + chartColumn.spacing)) {
-                sideBar.currentIndex = i;
-                break;
+    // 当前选中索引变化时，更新图表配置
+    onCurrentIndexChanged: {
+        sideBar.currentIndex = currentIndex;
+        if (currentIndex >= 0 && currentIndex < sensorConfigs.count) {
+            var config = sensorConfigs.get(currentIndex);
+            root.currentTitle = config.title;
+            root.currentLimitMinY = config.limitMinY;
+            root.currentLimitMaxY = config.limitMaxY;
+            
+            // 根据 bufferType 设置对应的数据源
+            switch(config.bufferType) {
+                case "temp":
+                    root.currentDataBuffer = core.sampledTempBuffer;
+                    root.currentPredictList = core.predictedTempList;
+                    break;
+                case "hum":
+                    root.currentDataBuffer = core.sampledHumBuffer;
+                    root.currentPredictList = core.predictedHumList;
+                    break;
+                case "light":
+                    root.currentDataBuffer = core.sampledLightBuffer;
+                    root.currentPredictList = core.predictedLightList;
+                    break;
+                case "mq135":
+                    root.currentDataBuffer = core.sampledMq135Buffer;
+                    root.currentPredictList = core.predictedMq135List;
+                    break;
+                case "zp01":
+                    root.currentDataBuffer = core.sampledZp01Buffer;
+                    root.currentPredictList = core.predictedZp01List;
+                    break;
+                default:
+                    root.currentDataBuffer = [];
+                    root.currentPredictList = [];
             }
         }
     }

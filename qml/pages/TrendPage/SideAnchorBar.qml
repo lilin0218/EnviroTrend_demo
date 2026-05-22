@@ -28,16 +28,16 @@ Rectangle {
             tag: "light";
         }
         ListElement {
-            name: "噪音";
-            tag: "noise";
-        }
-        ListElement {
-            name: "颗粒物";
+            name: "颗粒物(MQ135)";
             tag: "particle";
         }
         ListElement {
-            name: "AQI";
+            name: "空气质量(ZP01)";
             tag: "aqi";
+        }
+        ListElement {
+            name: "噪音";
+            tag: "noise";
         }
     }
 
@@ -78,7 +78,7 @@ Rectangle {
                     Text {
                         text: name
                         color: root.currentIndex === index ? "white" : "#666666"
-                        font.pixelSize: btn.width / 6
+                        font.pixelSize: btn.width / 8
                         font.bold: root.currentIndex === index
                         anchors.horizontalCenter: parent.horizontalCenter
                     }

@@ -25,8 +25,8 @@ Item {
     // Y 轴范围
     property double limitMinY: 0.0
     property double limitMaxY: 100.0
-    property double viewMinY: 0.0
-    property double viewMaxY: 100.0
+    property double viewMinY: limitMinY
+    property double viewMaxY: limitMaxY
 
     // 折线抽样控制（控制每次绘制的点数上限）
     property int maxPointsShort: 150
@@ -38,7 +38,6 @@ Item {
     height: 350
 
     // 监听逻辑
-    onDataBufferChanged: updateSeries()
     onPredictListChanged: {
         // 捕获生成预测瞬间的时间基准（使用当前系统时间）
         predictBaseTime = Date.now()
@@ -91,6 +90,12 @@ Item {
             }
 
             LineSeries {
+                id: gapSeries
+                name: "数据缺失"; axisX: axisX; axisY: axisY
+                color: "#FF4444"; width: 2; useOpenGL: true
+            }
+
+            LineSeries {
                 id: predictSeries
                 name: "LSTM 预测"; axisX: axisX; axisY: axisY
                 color: root.aiLineColor; width: 2; useOpenGL: true
@@ -140,23 +145,14 @@ Item {
                     from: root.limitMinY
                     to: root.limitMaxY
                     labelPosition: "Right"
-                    
-                    // 使用onPressedChanged来避免绑定循环
-                    first.onPressedChanged: {
-                        if (!first.pressed) {
-                            root.viewMinY = first.value
-                        }
+                    first.value: root.viewMinY
+                    second.value: root.viewMaxY
+
+                    first.onValueChanged: {
+                        root.viewMinY = first.value
                     }
-                    second.onPressedChanged: {
-                        if (!second.pressed) {
-                            root.viewMaxY = second.value
-                        }
-                    }
-                    
-                    // 初始化值
-                    Component.onCompleted: {
-                        first.value = root.viewMinY
-                        second.value = root.viewMaxY
+                    second.onValueChanged: {
+                        root.viewMaxY = second.value
                     }
                 }
             }
@@ -189,8 +185,63 @@ Item {
 
     // --- 核心逻辑函数 ---
 
+    // 根据实际数据自动计算合适的Y轴范围
+    function autoCalcYRange() {
+        if (dataBuffer.length === 0) {
+            viewMinY = limitMinY
+            viewMaxY = limitMaxY
+            return
+        }
+
+        var dataMin = Infinity
+        var dataMax = -Infinity
+
+        for (var i = 0; i < dataBuffer.length; i++) {
+            var val = parseFloat(dataBuffer[i])
+            if (!isNaN(val)) {
+                if (val < dataMin) dataMin = val
+                if (val > dataMax) dataMax = val
+            }
+        }
+
+        if (dataMin === Infinity || dataMax === -Infinity) {
+            viewMinY = limitMinY
+            viewMaxY = limitMaxY
+            return
+        }
+
+        var dataRange = dataMax - dataMin
+        var padding = dataRange * 0.25 // 上下各留25%的padding，更宽松
+        if (padding < 3) padding = 3   // 最小padding为3，更宽松
+
+        var calcMin = dataMin - padding
+        var calcMax = dataMax + padding
+
+        // 确保在limit范围内
+        if (calcMin < limitMinY) calcMin = limitMinY
+        if (calcMax > limitMaxY) calcMax = limitMaxY
+
+        // 确保最小值不超过最大值
+        if (calcMin >= calcMax) {
+            calcMin = limitMinY
+            calcMax = limitMaxY
+        }
+
+        viewMinY = calcMin
+        viewMaxY = calcMax
+    }
+
+    // 在数据或limit变化时重新计算Y轴范围
+    onDataBufferChanged: {
+        autoCalcYRange()
+        updateSeries()
+    }
+
+    onLimitMinYChanged: autoCalcYRange()
+    onLimitMaxYChanged: autoCalcYRange()
+
     function updateSeries() {
-        if (!series || !axisX) return
+        if (!series || !gapSeries || !axisX) return
         var nowMs = Date.now()
         var interval = 60000 * root.sampleStep // 采样间隔 = 原始间隔 × 采样步长
 
@@ -218,16 +269,51 @@ Item {
             if (step < 1) step = 1
         }
 
-        // 绘制真实线
+        // 清空所有 series
         series.clear()
+        gapSeries.clear()
+
         if (totalCount > 0) {
+            var lastValidValue = null
+            var lastValidTime = null
+            var inGap = false
+            var gapStartValue = null
+            var gapStartTime = null
+
             for (var i = 0; i < totalCount; i += step) {
-                // 时间戳计算：dataBuffer最后一点对应当前时间，每隔interval一个点
                 var pTime = nowMs - (totalCount - 1 - i) * interval
-                if (pTime >= axisX.min.getTime() && pTime <= axisX.max.getTime()) {
-                    series.append(pTime, dataBuffer[i])
+                if (pTime < axisX.min.getTime() || pTime > axisX.max.getTime()) {
+                    continue
+                }
+
+                var val = parseFloat(dataBuffer[i])
+                var isNaNVal = isNaN(val)
+
+                if (!isNaNVal) {
+                    // 正常数据点
+                    if (inGap && lastValidValue !== null) {
+                        // 结束一个 gap，从 gap 起点绘制到当前点
+                        gapSeries.append(gapStartTime, gapStartValue)
+                        gapSeries.append(pTime, val)
+                        inGap = false
+                    }
+                    // 添加到正常 series
+                    series.append(pTime, val)
+                    lastValidValue = val
+                    lastValidTime = pTime
+                } else {
+                    // NaN 值
+                    if (!inGap && lastValidValue !== null) {
+                        // 开始一个 gap
+                        gapStartValue = lastValidValue
+                        gapStartTime = lastValidTime
+                        inGap = true
+                    }
+                    // 不在正常 series 中添加 NaN 值
                 }
             }
+
+            // 如果数据以 gap 结尾，不处理（因为没有结束点）
         }
 
         // 绘制预测线 (24H 预测量)

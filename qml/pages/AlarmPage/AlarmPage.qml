@@ -23,6 +23,7 @@ Item {
             unit: "°C"
             value: core.tempStr
             iconSource: "qrc:/res/sensor/temp_checked.png"
+            sensorIndex: 0
             defaultMin: 15
             defaultMax: 35
         }
@@ -33,6 +34,7 @@ Item {
             unit: "%"
             value: core.humStr
             iconSource: "qrc:/res/sensor/hum_checked.png"
+            sensorIndex: 1
             defaultMin: 30
             defaultMax: 90
         }
@@ -43,6 +45,7 @@ Item {
             unit: "V"
             value: core.lightStr
             iconSource: "qrc:/res/sensor/light_checked.png"
+            sensorIndex: 2
             defaultMin: 0
             defaultMax: 3.3
         }
@@ -53,6 +56,7 @@ Item {
             unit: "ppm"
             value: core.mq135Str
             iconSource: "qrc:/res/sensor/aqi_checked.png"
+            sensorIndex: 3
             defaultMin: 0
             defaultMax: 100
         }
@@ -63,6 +67,7 @@ Item {
             unit: "μg/m³"
             value: core.zp01Str
             iconSource: "qrc:/res/sensor/particle_checked.png"
+            sensorIndex: 4
             defaultMin: 0
             defaultMax: 100
         }
@@ -97,14 +102,14 @@ Item {
                     Text {
                         text: "噪音"
                         color: "#666666"
-                        font.pixelSize: height * 0.13
+//                        font.pixelSize: height * 0.13
                     }
 
                     Text {
                         text: "已禁用"
                         color: "#888888"
                         font.bold: true
-                        font.pixelSize: height * 0.2
+//                        font.pixelSize: height * 0.2
                     }
                 }
             }

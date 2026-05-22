@@ -27,6 +27,7 @@ set(SOURCES
     src/sensor/lightsensor.cpp
     src/sensor/zpsensor.cpp
     src/sensor/mq135sensor.cpp
+    src/tool/screenshotmanager.cpp
 )
 
 # 头文件
@@ -40,6 +41,7 @@ set(HEADERS
     src/sensor/lightsensor.h
     src/sensor/zpsensor.h
     src/sensor/mq135sensor.h
+    src/tool/screenshotmanager.h
 )
 
 # 资源文件

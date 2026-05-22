@@ -83,7 +83,7 @@ void Logger::writeLog(LogLevel level, const QString& module, const QString& mess
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz");
     QString levelStr = levelToString(level);
     QString color = levelToColor(level);
-    QString logLine = QString("[%1] [%2] [%3] %4\n")
+    QString logLine = QString("[%1] [%2] [%3] %4")
                       .arg(timestamp)
                       .arg(levelStr)
                       .arg(module)
@@ -91,10 +91,29 @@ void Logger::writeLog(LogLevel level, const QString& module, const QString& mess
     
     if (m_logFile.isOpen()) {
         QTextStream stream(&m_logFile);
-        stream << logLine;
+        stream << logLine << "\n";
         stream.flush();
-    } else {
-        std::cerr << logLine.toStdString();
+    }
+    
+    // 只输出到终端：INFO级别及以上，并且排除NETWORK模块的连接错误日志
+    bool shouldPrintToConsole = false;
+    if (level >= INFO) {
+        if (module == "NETWORK") {
+            // 排除网络连接错误日志，但保留其他NETWORK日志
+            if (!message.contains("Connection error") && !message.contains("network not connected")) {
+                shouldPrintToConsole = true;
+            }
+        } else if (module == "AI" || module == "MAIN" || module == "CORE") {
+            // AI、MAIN、CORE模块的日志保留终端输出
+            shouldPrintToConsole = true;
+        } else if (level >= ERROR) {
+            // ERROR级别以上的重要错误保留终端输出
+            shouldPrintToConsole = true;
+        }
+    }
+    
+    if (shouldPrintToConsole) {
+        std::cout << logLine.toStdString() << std::endl;
     }
     
     QVariantMap logEntry;
@@ -109,7 +128,6 @@ void Logger::writeLog(LogLevel level, const QString& module, const QString& mess
         m_logHistory.removeFirst();
     }
     
-    qDebug() << "[DEBUG Logger] Emitting logAdded - level:" << levelStr << "module:" << module << "message:" << message;
     emit logAdded(timestamp, levelStr, module, message, color);
 }
 

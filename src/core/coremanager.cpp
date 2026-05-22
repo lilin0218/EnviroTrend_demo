@@ -1,5 +1,6 @@
 #include "coremanager.h"
 #include "logger.h"
+#include "../tool/screenshotmanager.h"
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -19,6 +20,9 @@ CoreManager::CoreManager(QObject *parent) : QObject(parent),
     m_isAiBusy(false)
 {
     Logger::instance()->info("CORE", "CoreManager initialized");
+    
+    // 初始化传感器阈值
+    initSensorThresholds();
     
     connect(m_backstage, &Backstage::errorOccurred, this, &CoreManager::handleBackstageError);
     
@@ -61,6 +65,9 @@ CoreManager::CoreManager(QObject *parent) : QObject(parent),
         qDebug() << "[CORE] Hardware mode:" << isHardware << "Mock mode:" << !isHardware;
         emit sensorStatusChanged();
     });
+    
+    // 启动截图功能
+    ScreenshotManager::instance()->startCapturing();
 
     // 预测进程初始化
     connect(m_predictProcess, &QProcess::readyReadStandardOutput, this, [this]() {
@@ -244,24 +251,45 @@ QString CoreManager::mq135Str() const {
     return QString::number(m_backstage->getMQ135(), 'f', 1);
 }
 
-QList<double> CoreManager::tempBuffer() const {
-    return m_backstage->getTempBuffer();
+QVariantList CoreManager::tempBuffer() const {
+    // 将 QList<QVariant> 转换为 QVariantList
+    QVariantList result;
+    for (const QVariant& val : m_backstage->getTempBuffer()) {
+        result.append(val);
+    }
+    return result;
 }
 
-QList<double> CoreManager::humBuffer() const {
-    return m_backstage->getHumBuffer();
+QVariantList CoreManager::humBuffer() const {
+    QVariantList result;
+    for (const QVariant& val : m_backstage->getHumBuffer()) {
+        result.append(val);
+    }
+    return result;
 }
 
-QList<double> CoreManager::lightBuffer() const {
-    return m_backstage->getLightBuffer();
+QVariantList CoreManager::lightBuffer() const {
+    QVariantList result;
+    for (const QVariant& val : m_backstage->getLightBuffer()) {
+        result.append(val);
+    }
+    return result;
 }
 
-QList<double> CoreManager::zp01Buffer() const {
-    return m_backstage->getZP01Buffer();
+QVariantList CoreManager::zp01Buffer() const {
+    QVariantList result;
+    for (const QVariant& val : m_backstage->getZP01Buffer()) {
+        result.append(val);
+    }
+    return result;
 }
 
-QList<double> CoreManager::mq135Buffer() const {
-    return m_backstage->getMQ135Buffer();
+QVariantList CoreManager::mq135Buffer() const {
+    QVariantList result;
+    for (const QVariant& val : m_backstage->getMQ135Buffer()) {
+        result.append(val);
+    }
+    return result;
 }
 
 QVariantList CoreManager::predictedTempList() const {
@@ -330,10 +358,6 @@ QVariantList CoreManager::sampledMq135Buffer() const {
 
 QVariantList CoreManager::sampledZp01Buffer() const {
     return m_backstage->getSampledZp01Buffer();
-}
-
-void CoreManager::onBackstageDataChanged() {
-    emit valueSig();
 }
 
 void CoreManager::setSensorActive(int id, bool active) {
@@ -412,8 +436,6 @@ QVariantList CoreManager::logList() const {
 }
 
 void CoreManager::handleLogAdded(const QString& timestamp, const QString& level, const QString& module, const QString& message, const QString& color) {
-    qDebug() << "[DEBUG CoreManager] handleLogAdded received - level:" << level << "module:" << module << "message:" << message;
-    
     QVariantMap logEntry;
     logEntry["timestamp"] = timestamp;
     logEntry["level"] = level;
@@ -422,12 +444,157 @@ void CoreManager::handleLogAdded(const QString& timestamp, const QString& level,
     logEntry["color"] = color;
     
     m_logList.append(logEntry);
-    qDebug() << "[DEBUG CoreManager] logList size:" << m_logList.size();
     
     if (m_logList.size() > 100) {
         m_logList.removeFirst();
     }
-    
-    qDebug() << "[DEBUG CoreManager] Emitting logListUpdated";
+
     emit logListUpdated();
+}
+
+void CoreManager::startScreenshotCapture() {
+    ScreenshotManager::instance()->startCapturing();
+}
+
+void CoreManager::stopScreenshotCapture() {
+    ScreenshotManager::instance()->stopCapturing();
+}
+
+void CoreManager::captureScreenshotNow() {
+    ScreenshotManager::instance()->captureNow();
+}
+
+void CoreManager::initSensorThresholds() {
+    // 传感器索引: 0=温度,1=湿度,2=光照,3=MQ135,4=ZP01,5=噪音
+    m_sensorThresholds.clear();
+    m_sensorAlarmStates.clear();
+    
+    // 温度
+    QVariantMap tempMap;
+    tempMap["min"] = 15.0;
+    tempMap["max"] = 35.0;
+    m_sensorThresholds.append(tempMap);
+    m_sensorAlarmStates.append(0); // 0=正常
+    
+    // 湿度
+    QVariantMap humMap;
+    humMap["min"] = 30.0;
+    humMap["max"] = 90.0;
+    m_sensorThresholds.append(humMap);
+    m_sensorAlarmStates.append(0);
+    
+    // 光照
+    QVariantMap lightMap;
+    lightMap["min"] = 0.0;
+    lightMap["max"] = 3.3;
+    m_sensorThresholds.append(lightMap);
+    m_sensorAlarmStates.append(0);
+    
+    // MQ135
+    QVariantMap mq135Map;
+    mq135Map["min"] = 0.0;
+    mq135Map["max"] = 100.0;
+    m_sensorThresholds.append(mq135Map);
+    m_sensorAlarmStates.append(0);
+    
+    // ZP01
+    QVariantMap zp01Map;
+    zp01Map["min"] = 0.0;
+    zp01Map["max"] = 100.0;
+    m_sensorThresholds.append(zp01Map);
+    m_sensorAlarmStates.append(0);
+    
+    // 噪音 - 禁用状态
+    QVariantMap noiseMap;
+    noiseMap["min"] = 0.0;
+    noiseMap["max"] = 100.0;
+    m_sensorThresholds.append(noiseMap);
+    m_sensorAlarmStates.append(2); // 2=禁用
+    
+    emit sensorThresholdsChanged();
+    emit sensorAlarmStatesChanged();
+}
+
+void CoreManager::setSensorThreshold(int sensorIndex, double minVal, double maxVal) {
+    if (sensorIndex < 0 || sensorIndex >= m_sensorThresholds.size())
+        return;
+    
+    QVariantMap threshold = m_sensorThresholds[sensorIndex].toMap();
+    threshold["min"] = minVal;
+    threshold["max"] = maxVal;
+    m_sensorThresholds[sensorIndex] = threshold;
+    
+    emit sensorThresholdsChanged();
+    updateSensorAlarmState(sensorIndex);
+}
+
+QVariantMap CoreManager::getSensorThreshold(int sensorIndex) {
+    if (sensorIndex < 0 || sensorIndex >= m_sensorThresholds.size())
+        return QVariantMap();
+    return m_sensorThresholds[sensorIndex].toMap();
+}
+
+void CoreManager::resetSensorThreshold(int sensorIndex) {
+    // 重置为默认值
+    switch (sensorIndex) {
+        case 0: setSensorThreshold(0, 15.0, 35.0); break;
+        case 1: setSensorThreshold(1, 30.0, 90.0); break;
+        case 2: setSensorThreshold(2, 0.0, 3.3); break;
+        case 3: setSensorThreshold(3, 0.0, 100.0); break;
+        case 4: setSensorThreshold(4, 0.0, 100.0); break;
+        case 5: setSensorThreshold(5, 0.0, 100.0); break;
+    }
+}
+
+QVariantList CoreManager::sensorThresholds() const {
+    return m_sensorThresholds;
+}
+
+QVariantList CoreManager::sensorAlarmStates() const {
+    return m_sensorAlarmStates;
+}
+
+void CoreManager::updateSensorAlarmState(int sensorIndex) {
+    if (sensorIndex < 0 || sensorIndex >= m_sensorThresholds.size())
+        return;
+    
+    // 噪音传感器直接禁用
+    if (sensorIndex == 5) {
+        m_sensorAlarmStates[sensorIndex] = 2;
+        emit sensorAlarmStatesChanged();
+        return;
+    }
+    
+    QVariantMap threshold = m_sensorThresholds[sensorIndex].toMap();
+    double minVal = threshold["min"].toDouble();
+    double maxVal = threshold["max"].toDouble();
+    double value = 0;
+    
+    // 获取对应传感器的值
+    switch (sensorIndex) {
+        case 0: value = m_backstage->getTemp(); break;
+        case 1: value = m_backstage->getHum(); break;
+        case 2: value = m_backstage->getLight(); break;
+        case 3: value = m_backstage->getMQ135(); break;
+        case 4: value = m_backstage->getZP01(); break;
+        default: break;
+    }
+    
+    // 检查是否在阈值范围内
+    int oldState = m_sensorAlarmStates[sensorIndex].toInt();
+    int newState = (value < minVal || value > maxVal) ? 1 : 0;
+    
+    if (oldState != newState) {
+        m_sensorAlarmStates[sensorIndex] = newState;
+        emit sensorAlarmStatesChanged();
+    }
+}
+
+void CoreManager::onBackstageDataChanged() {
+    emit valueSig();
+    
+    // 更新所有传感器警告状态
+    for (int i = 0; i < 6; i++) {
+        updateSensorAlarmState(i);
+    }
 }

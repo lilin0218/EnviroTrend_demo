@@ -5,163 +5,220 @@ import "../../common"
 
 Rectangle {
     id: cardRoot
-    radius: Theme.borderRadius
 
     property string label: ""
     property string unit: ""
     property string value: "--"
     property string iconSource: ""
+    property int sensorIndex: -1  // 传感器索引，用于与CoreManager绑定
+
     property real defaultMin: 0
     property real defaultMax: 100
 
-    property real minThreshold: defaultMin
-    property real maxThreshold: defaultMax
+    property real minThreshold: {
+        // 从CoreManager获取阈值
+        if (sensorIndex >= 0) {
+            var thresholds = core.sensorThresholds
+            if (thresholds.length > sensorIndex) {
+                var t = thresholds[sensorIndex]
+                return t.min !== undefined ? t.min : defaultMin
+            }
+        }
+        return defaultMin
+    }
 
-    color: isAlarm ? Qt.rgba(1, 0.23, 0.19, 0.15) : Qt.rgba(1, 1, 1, 0.1)
-    border.color: isAlarm ? Theme.accentRed : Theme.accentBlue
-    border.width: isAlarm ? 1.5 : 1.5
+    property real maxThreshold: {
+        // 从CoreManager获取阈值
+        if (sensorIndex >= 0) {
+            var thresholds = core.sensorThresholds
+            if (thresholds.length > sensorIndex) {
+                var t = thresholds[sensorIndex]
+                return t.max !== undefined ? t.max : defaultMax
+            }
+        }
+        return defaultMax
+    }
 
     property bool isAlarm: {
         var num = parseFloat(value)
-        if (isNaN(num)) return false
+        if (isNaN(num))
+            return false
+
         return num < minThreshold || num > maxThreshold
     }
 
-    Row {
+    radius: Theme.borderRadius
+
+    color: isAlarm
+           ? Qt.rgba(1, 0.23, 0.19, 0.12)
+           : Qt.rgba(1, 1, 1, 0.08)
+
+    border.color: isAlarm
+                  ? Theme.accentRed
+                  : Theme.borderLight
+
+    border.width: 1.5
+
+    RowLayout {
         anchors.fill: parent
-        anchors.margins: cardRoot.width * 0.06
-        spacing: cardRoot.width * 0.04
+        anchors.margins: 18
+        spacing: 20
 
         Item {
-            width: parent.height * 0.6; height: width
-            anchors.verticalCenter: parent.verticalCenter
+            Layout.preferredWidth: parent.height * 0.7
+            Layout.preferredHeight: parent.height * 0.7
 
-            Image {
+            Rectangle {
                 anchors.fill: parent
-                source: iconSource
+                radius: 16
+                color: "transparent"
+
+                Image {
+                    anchors.centerIn: parent
+                    width: parent.width * 0.8
+                    height: parent.height * 0.8
+                    source: iconSource
+                    fillMode: Image.PreserveAspectFit
+                }
             }
         }
 
-        Column {
-            anchors.verticalCenter: parent.verticalCenter
-//            spacing: cardRoot.height * 0.05
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 4
 
             Text {
                 text: cardRoot.label
                 color: Theme.textSecondary
-                font.pixelSize: cardRoot.height * 0.13
+                font.pixelSize: cardRoot.height * 0.15
             }
 
-            Row {
-                spacing: 4
-
-                Text {
-                    text: cardRoot.value
-                    color: isAlarm ? Theme.accentRed : Theme.textMain
-                    font.bold: true
-                    font.pixelSize: cardRoot.height * 0.2
-                }
-
-                Text {
-                    text: cardRoot.unit
-                    color: Theme.textSecondary
-                    font.pixelSize: cardRoot.height * 0.1
-                }
+            Text {
+                text: cardRoot.value + " " + cardRoot.unit
+                color: isAlarm ? Theme.accentRed : Theme.textMain
+                font.bold: true
+                font.pixelSize: cardRoot.height * 0.22
             }
 
-            Row {
-                spacing: 4
+            Rectangle {
+                radius: 8
+                height: cardRoot.height * 0.15
+                width: statusText.contentWidth + 16
+
+                color: isAlarm
+                       ? Qt.rgba(1, 0.23, 0.19, 0.18)
+                       : Qt.rgba(0, 1, 0, 0.12)
 
                 Text {
-                    text: isAlarm ? "⚠" : "✓"
-                    color: isAlarm ? Theme.accentRed : Theme.accentGreen
-                    font.pixelSize: cardRoot.height * 0.1
-                }
+                    id: statusText
+                    anchors.centerIn: parent
 
-                Text {
                     text: isAlarm ? "预警" : "正常"
-                    color: isAlarm ? Theme.accentRed : Theme.accentGreen
-                    font.pixelSize: cardRoot.height * 0.08
+
+                    color: isAlarm
+                           ? Theme.accentRed
+                           : Theme.accentGreen
+
+                    font.pixelSize: cardRoot.height * 0.09
+                    font.bold: true
                 }
             }
+        }
 
-            Row {
-                spacing: 8
-                anchors.topMargin: cardRoot.height * 0.03
+        ColumnLayout {
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 8
 
-                Column {
-                    spacing: 2
+            Text {
+                text: "阈值范围"
+                color: Theme.textSecondary
+                font.pixelSize: cardRoot.height * 0.13
+                font.bold: true
+                horizontalAlignment: Text.AlignRight
+            }
 
-                    Text {
-                        text: "最小"
-                        color: Theme.textDisabled
-                        font.pixelSize: cardRoot.height * 0.06
+            RowLayout {
+                spacing: 6
+
+                TextField {
+                    id: minInput
+
+                    Layout.preferredWidth: 60
+                    Layout.preferredHeight: 32
+
+                    text: minThreshold.toFixed(1)
+
+                    color: Theme.textMain
+                    font.pixelSize: cardRoot.height * 0.12
+                    font.bold: true
+                    horizontalAlignment: Text.AlignCenter
+
+                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+
+                    background: Rectangle {
+                        radius: 4
+                        color: Theme.mainBg
+
+                        border.color: Theme.borderLight
+                        border.width: 1
                     }
 
-                    TextField {
-                        id: minInput
-                        width: cardRoot.width * 0.22
-                        height: cardRoot.height * 0.3
-                        text: minThreshold.toFixed(1)
-                        color: Theme.textMain
-                        background: Rectangle {
-                            color: Theme.mainBg
-                            radius: 3
-                            border.color: Theme.borderLight
-                            border.width: 1
-                        }
-                        font.pixelSize: cardRoot.height * 0.08
-                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                    onEditingFinished: {
+                        var val = parseFloat(text)
 
-                        onEditingFinished: {
-                            var val = parseFloat(text)
-                            if (!isNaN(val)) {
-                                cardRoot.minThreshold = val
-                            } else {
-                                text = cardRoot.minThreshold.toFixed(1)
-                            }
+                        if (!isNaN(val) && sensorIndex >= 0) {
+                            // 更新CoreManager中的阈值
+                            core.setSensorThreshold(sensorIndex, val, cardRoot.maxThreshold)
+                        } else if (!isNaN(val)) {
+                            cardRoot.minThreshold = val
+                        } else {
+                            text = cardRoot.minThreshold.toFixed(1)
                         }
                     }
                 }
 
                 Text {
-                    text: "-"
-                    color: Theme.textDisabled
+                    text: "~"
+                    color: Theme.textSecondary
                     font.pixelSize: cardRoot.height * 0.12
-                    anchors.verticalCenter: parent.verticalCenter
+                    font.bold: true
+                    Layout.alignment: Qt.AlignVCenter
                 }
 
-                Column {
-                    spacing: 2
+                TextField {
+                    id: maxInput
 
-                    Text {
-                        text: "最大"
-                        color: Theme.textDisabled
-                        font.pixelSize: cardRoot.height * 0.06
+                    Layout.preferredWidth: 60
+                    Layout.preferredHeight: 32
+
+                    text: maxThreshold.toFixed(1)
+
+                    color: Theme.textMain
+                    font.pixelSize: cardRoot.height * 0.12
+                    font.bold: true
+                    horizontalAlignment: Text.AlignCenter
+
+                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+
+                    background: Rectangle {
+                        radius: 4
+                        color: Theme.mainBg
+
+                        border.color: Theme.borderLight
+                        border.width: 1
                     }
 
-                    TextField {
-                        id: maxInput
-                        width: cardRoot.width * 0.22
-                        height: cardRoot.height * 0.3
-                        text: maxThreshold.toFixed(1)
-                        color: Theme.textMain
-                        background: Rectangle {
-                            color: Theme.mainBg
-                            radius: 3
-                            border.color: Theme.borderLight
-                            border.width: 1
-                        }
-                        font.pixelSize: cardRoot.height * 0.08
-                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                    onEditingFinished: {
+                        var val = parseFloat(text)
 
-                        onEditingFinished: {
-                            var val = parseFloat(text)
-                            if (!isNaN(val)) {
-                                cardRoot.maxThreshold = val
-                            } else {
-                                text = cardRoot.maxThreshold.toFixed(1)
-                            }
+                        if (!isNaN(val) && sensorIndex >= 0) {
+                            // 更新CoreManager中的阈值
+                            core.setSensorThreshold(sensorIndex, cardRoot.minThreshold, val)
+                        } else if (!isNaN(val)) {
+                            cardRoot.maxThreshold = val
+                        } else {
+                            text = cardRoot.maxThreshold.toFixed(1)
                         }
                     }
                 }

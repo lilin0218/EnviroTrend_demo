@@ -22,11 +22,11 @@ class CoreManager : public QObject {
     Q_PROPERTY(QString lightStr READ lightStr NOTIFY valueSig)
     Q_PROPERTY(QString zp01Str READ zp01Str NOTIFY valueSig)
     Q_PROPERTY(QString mq135Str READ mq135Str NOTIFY valueSig)
-    Q_PROPERTY(QList<double> tempBuffer READ tempBuffer NOTIFY bufferSig)
-    Q_PROPERTY(QList<double> humBuffer READ humBuffer NOTIFY bufferSig)
-    Q_PROPERTY(QList<double> lightBuffer READ lightBuffer NOTIFY bufferSig)
-    Q_PROPERTY(QList<double> zp01Buffer READ zp01Buffer NOTIFY bufferSig)
-    Q_PROPERTY(QList<double> mq135Buffer READ mq135Buffer NOTIFY bufferSig)
+    Q_PROPERTY(QVariantList tempBuffer READ tempBuffer NOTIFY bufferSig)
+    Q_PROPERTY(QVariantList humBuffer READ humBuffer NOTIFY bufferSig)
+    Q_PROPERTY(QVariantList lightBuffer READ lightBuffer NOTIFY bufferSig)
+    Q_PROPERTY(QVariantList zp01Buffer READ zp01Buffer NOTIFY bufferSig)
+    Q_PROPERTY(QVariantList mq135Buffer READ mq135Buffer NOTIFY bufferSig)
     Q_PROPERTY(QVariantList predictedTempList READ predictedTempList NOTIFY predictionUpdated)
     Q_PROPERTY(QVariantList predictedHumList READ predictedHumList NOTIFY predictionUpdated)
     Q_PROPERTY(QVariantList predictedLightList READ predictedLightList NOTIFY predictionUpdated)
@@ -43,6 +43,10 @@ class CoreManager : public QObject {
     Q_PROPERTY(bool isSensorActive READ isSensorActive NOTIFY sensorStatusChanged)
     Q_PROPERTY(bool isNetworkConnected READ isNetworkConnected NOTIFY networkStatusChanged)
     Q_PROPERTY(QVariantList logList READ logList NOTIFY logListUpdated)
+    
+    // 传感器阈值和警告状态
+    Q_PROPERTY(QVariantList sensorThresholds READ sensorThresholds NOTIFY sensorThresholdsChanged)
+    Q_PROPERTY(QVariantList sensorAlarmStates READ sensorAlarmStates NOTIFY sensorAlarmStatesChanged)
 
 public:
     explicit CoreManager(QObject *parent = nullptr);
@@ -59,17 +63,27 @@ public:
 
     // 手动启动 AI 预测
     Q_INVOKABLE void runPrediction();
+    
+    // 截图相关方法
+    Q_INVOKABLE void startScreenshotCapture();
+    Q_INVOKABLE void stopScreenshotCapture();
+    Q_INVOKABLE void captureScreenshotNow();
+    
+    // 传感器阈值相关方法
+    Q_INVOKABLE void setSensorThreshold(int sensorIndex, double minVal, double maxVal);
+    Q_INVOKABLE QVariantMap getSensorThreshold(int sensorIndex);
+    Q_INVOKABLE void resetSensorThreshold(int sensorIndex);
 
     QString tempStr() const;
     QString humStr() const;
     QString lightStr() const;
     QString zp01Str() const;
     QString mq135Str() const;
-    QList<double> tempBuffer() const;
-    QList<double> humBuffer() const;
-    QList<double> lightBuffer() const;
-    QList<double> zp01Buffer() const;
-    QList<double> mq135Buffer() const;
+    QVariantList tempBuffer() const;
+    QVariantList humBuffer() const;
+    QVariantList lightBuffer() const;
+    QVariantList zp01Buffer() const;
+    QVariantList mq135Buffer() const;
     QVariantList predictedTempList() const;
     QVariantList predictedHumList() const;
     QVariantList predictedLightList() const;
@@ -86,6 +100,8 @@ public:
     bool isSensorActive() const;
     bool isNetworkConnected() const;
     QVariantList logList() const;
+    QVariantList sensorThresholds() const;
+    QVariantList sensorAlarmStates() const;
 
 signals:
     void valueSig();
@@ -98,6 +114,8 @@ signals:
     void networkStatusChanged(bool connected);
     void errorOccurred(const QString &error);
     void logListUpdated();
+    void sensorThresholdsChanged();
+    void sensorAlarmStatesChanged();
 
 private slots:
     void onBackstageDataChanged();
@@ -107,6 +125,10 @@ private slots:
     void handleSensorError(const QString &error);
     void handleBackstageError(const QString &error);
     void handleLogAdded(const QString& timestamp, const QString& level, const QString& module, const QString& message, const QString& color);
+
+private:
+    void initSensorThresholds();
+    void updateSensorAlarmState(int sensorIndex);
 
 private:
     Backstage *m_backstage;
@@ -126,6 +148,11 @@ private:
     bool m_isAiBusy;
     QByteArray m_aiStdoutBuffer;
     QByteArray m_aiStderrBuffer;
+    
+    // 传感器阈值和警告状态
+    QVariantList m_sensorThresholds;  // 每个元素是QVariantMap { min, max }
+    QVariantList m_sensorAlarmStates; // 0=正常, 1=告警, 2=禁用
 };
+
 
 #endif // COREMANAGER_H

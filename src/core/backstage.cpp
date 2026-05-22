@@ -135,13 +135,21 @@ bool Backstage::loadBufferFromDatabase() {
     m_zp01Buffer.clear();
     m_mq135Buffer.clear();
 
-    QList<double> tempList, humList, lightList, mq135List, zp01List;
+    QList<QVariant> tempList, humList, lightList, mq135List, zp01List;
     while (query.next()) {
-        tempList.prepend(query.value(0).toDouble());
-        humList.prepend(query.value(1).toDouble());
-        lightList.prepend(query.value(2).toDouble());
-        mq135List.prepend(query.value(3).toDouble());
-        zp01List.prepend(query.value(4).toDouble());
+        // 使用 QVariant 保存，NULL值保持为无效的 QVariant
+        QVariant tempVal = query.value(0);
+        QVariant humVal = query.value(1);
+        QVariant lightVal = query.value(2);
+        QVariant mq135Val = query.value(3);
+        QVariant zp01Val = query.value(4);
+        
+        // 如果是 NULL，使用 NaN 标记
+        tempList.prepend(tempVal.isNull() ? QVariant(qQNaN()) : tempVal.toDouble());
+        humList.prepend(humVal.isNull() ? QVariant(qQNaN()) : humVal.toDouble());
+        lightList.prepend(lightVal.isNull() ? QVariant(qQNaN()) : lightVal.toDouble());
+        mq135List.prepend(mq135Val.isNull() ? QVariant(qQNaN()) : mq135Val.toDouble());
+        zp01List.prepend(zp01Val.isNull() ? QVariant(qQNaN()) : zp01Val.toDouble());
     }
 
     m_tempBuffer = tempList;
@@ -156,11 +164,13 @@ bool Backstage::loadBufferFromDatabase() {
 
 bool Backstage::updateDatabase(double t, double h, double light, double mq135, double zp01) {
     if (!m_db.isOpen()) {
-        qWarning() << "[DB] Database not open, cannot update";
+        Logger::instance()->warning("DB", "Database not open, cannot update");
         return false;
     }
 
     QSqlQuery query(m_db);
+    
+    // 插入新数据
     query.prepare(
         "INSERT INTO sensor_data (timestamp, temperature, humidity, light, mq135, zp01) "
         "VALUES (:timestamp, :temperature, :humidity, :light, :mq135, :zp01)"
@@ -175,14 +185,24 @@ bool Backstage::updateDatabase(double t, double h, double light, double mq135, d
     query.bindValue(":zp01", zp01);
 
     if (!query.exec()) {
-        qCritical() << "[DB] Failed to insert data:" << query.lastError().text();
+        Logger::instance()->error("DB", QString("Failed to insert data: %1").arg(query.lastError().text()));
         return false;
     }
+    
+    // 删除超过1周的老数据
+    QSqlQuery deleteQuery(m_db);
+    QString deleteSQL = "DELETE FROM sensor_data WHERE timestamp < datetime('now', '-7 days')";
+    if (!deleteQuery.exec(deleteSQL)) {
+        Logger::instance()->warning("DB", QString("Failed to delete old data: %1").arg(deleteQuery.lastError().text()));
+    } else if (deleteQuery.numRowsAffected() > 0) {
+        Logger::instance()->debug("DB", QString("Deleted %1 old records (older than 7 days)").arg(deleteQuery.numRowsAffected()));
+    }
+    
     return true;
 }
 
 void Backstage::processSnapshot() {
-    auto updateBuf = [this](QList<double> &list, double val) {
+    auto updateBuf = [this](QList<QVariant> &list, double val) {
         list.append(val);
         if (list.size() > MAX_POINTS_24H) {
             list.removeFirst();
@@ -259,23 +279,23 @@ void Backstage::setMQ135(double mq135) {
     m_currentMQ135 = mq135;
 }
 
-QList<double> Backstage::getTempBuffer() const {
+QList<QVariant> Backstage::getTempBuffer() const {
     return m_tempBuffer;
 }
 
-QList<double> Backstage::getHumBuffer() const {
+QList<QVariant> Backstage::getHumBuffer() const {
     return m_humBuffer;
 }
 
-QList<double> Backstage::getLightBuffer() const {
+QList<QVariant> Backstage::getLightBuffer() const {
     return m_lightBuffer;
 }
 
-QList<double> Backstage::getZP01Buffer() const {
+QList<QVariant> Backstage::getZP01Buffer() const {
     return m_zp01Buffer;
 }
 
-QList<double> Backstage::getMQ135Buffer() const {
+QList<QVariant> Backstage::getMQ135Buffer() const {
     return m_mq135Buffer;
 }
 
@@ -318,24 +338,10 @@ bool Backstage::purgeOldData(int daysToKeep) {
 
 void Backstage::clearTempBuffer() {
     m_tempBuffer.clear();
-    
-    if (m_db.isOpen()) {
-        QSqlQuery query(m_db);
-        if (!query.exec("UPDATE sensor_data SET temperature = NULL")) {
-            Logger::instance()->warning("DB", QString("Failed to clear temperature in database: %1").arg(query.lastError().text()));
-        }
-    }
 }
 
 void Backstage::clearHumBuffer() {
     m_humBuffer.clear();
-    
-    if (m_db.isOpen()) {
-        QSqlQuery query(m_db);
-        if (!query.exec("UPDATE sensor_data SET humidity = NULL")) {
-            Logger::instance()->warning("DB", QString("Failed to clear humidity in database: %1").arg(query.lastError().text()));
-        }
-    }
 }
 
 void Backstage::clearLightBuffer() {
