@@ -59,6 +59,12 @@ Thumbs.db
 # Backup directories
 deploy_backup/
 
+# Documentation
+docs/
+
+# Screenshots
+screenshot/
+
 # Qt Creator user config
 CMakeLists.txt.user
 
